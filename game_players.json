@@ -1,0 +1,209 @@
+{
+  "126663014776872@lid": {
+    "inv": {},
+    "stats": {
+      "hp": 1,
+      "maxHp": 100,
+      "atk": 3,
+      "def": 0,
+      "xp": 0,
+      "lvl": 1
+    },
+    "equip": {
+      "weapon": null,
+      "armor": null,
+      "pickaxe": 1
+    },
+    "cooldowns": {
+      "mine": 0,
+      "hunt": 1768838451509,
+      "dungeon": 0,
+      "base": 1768838419746
+    }
+  },
+  "124163259944966@lid": {
+    "inv": {},
+    "stats": {
+      "hp": 1,
+      "maxHp": 100,
+      "atk": 3,
+      "def": 0,
+      "xp": 0,
+      "lvl": 1
+    },
+    "equip": {
+      "weapon": null,
+      "armor": null,
+      "pickaxe": 1
+    },
+    "cooldowns": {
+      "mine": 0,
+      "hunt": 1768837812655,
+      "dungeon": 0,
+      "base": 0
+    }
+  },
+  "128965234659473@lid": {
+    "inv": {
+      "Pedra": 18
+    },
+    "stats": {
+      "hp": 100,
+      "maxHp": 100,
+      "atk": 3,
+      "def": 0,
+      "xp": 36,
+      "lvl": 1
+    },
+    "equip": {
+      "weapon": null,
+      "armor": null,
+      "pickaxe": 1
+    },
+    "cooldowns": {
+      "mine": 1768839004001,
+      "hunt": 0,
+      "dungeon": 0,
+      "base": 0
+    }
+  },
+  "62865604141280@lid": {
+    "inv": {
+      "Pedra": 9,
+      "Ouro": 1,
+      "Armadura": 1
+    },
+    "stats": {
+      "hp": 14,
+      "maxHp": 100,
+      "atk": 3,
+      "def": 0,
+      "xp": 25,
+      "lvl": 1
+    },
+    "equip": {
+      "weapon": null,
+      "armor": null,
+      "pickaxe": 1
+    },
+    "cooldowns": {
+      "mine": 1768838720658,
+      "hunt": 1768838748670,
+      "dungeon": 0,
+      "base": 1768838701552
+    }
+  },
+  "7748255240330@lid": {
+    "inv": {
+      "Pedra": 2,
+      "Ouro": 1
+    },
+    "stats": {
+      "hp": 18,
+      "maxHp": 100,
+      "atk": 3,
+      "def": 0,
+      "xp": 42,
+      "lvl": 1
+    },
+    "equip": {
+      "weapon": null,
+      "armor": null,
+      "pickaxe": 1
+    },
+    "cooldowns": {
+      "mine": 1768838550852,
+      "hunt": 1768838756982,
+      "dungeon": 0,
+      "base": 0
+    }
+  },
+  "558298257062-1575659740@g.us": {
+    "inv": {},
+    "stats": {
+      "hp": 100,
+      "maxHp": 100,
+      "atk": 3,
+      "def": 0,
+      "xp": 0,
+      "lvl": 1
+    },
+    "equip": {
+      "weapon": null,
+      "armor": null,
+      "pickaxe": 1
+    },
+    "cooldowns": {
+      "mine": 0,
+      "hunt": 0,
+      "dungeon": 0,
+      "base": 0
+    }
+  },
+  "43817256415254@lid": {
+    "inv": {},
+    "stats": {
+      "hp": 100,
+      "maxHp": 100,
+      "atk": 3,
+      "def": 0,
+      "xp": 20,
+      "lvl": 1
+    },
+    "equip": {
+      "weapon": null,
+      "armor": null,
+      "pickaxe": 1
+    },
+    "cooldowns": {
+      "mine": 0,
+      "hunt": 0,
+      "dungeon": 0,
+      "base": 0
+    }
+  },
+  "22368340680831@lid": {
+    "inv": {},
+    "stats": {
+      "hp": 100,
+      "maxHp": 100,
+      "atk": 3,
+      "def": 0,
+      "xp": 0,
+      "lvl": 1
+    },
+    "equip": {
+      "weapon": null,
+      "armor": null,
+      "pickaxe": 1
+    },
+    "cooldowns": {
+      "mine": 0,
+      "hunt": 0,
+      "dungeon": 0,
+      "base": 0
+    }
+  },
+  "209298185564324@lid": {
+    "inv": {},
+    "stats": {
+      "hp": 100,
+      "maxHp": 100,
+      "atk": 3,
+      "def": 0,
+      "xp": 20,
+      "lvl": 1
+    },
+    "equip": {
+      "weapon": null,
+      "armor": null,
+      "pickaxe": 1
+    },
+    "cooldowns": {
+      "mine": 0,
+      "hunt": 0,
+      "dungeon": 0,
+      "base": 0
+    }
+  }
+}

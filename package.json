@@ -1,0 +1,18 @@
+{
+  "name": "whatsapp-bot-baileys",
+  "version": "1.0.0",
+  "description": "WhatsApp bot using Baileys with group commands (e.g., '!-- sou hetero?')",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^7.0.0-rc.9",
+    "express": "^5.2.1",
+    "node-cron": "^4.2.1",
+    "pino": "^10.2.0",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0",
+    "socket.io": "^4.8.3"
+  }
+}
