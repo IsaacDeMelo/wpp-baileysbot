@@ -3,172 +3,234 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Admin RPG</title>
+    <title>Sigma Bot Admin</title>
+    
     <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
     <style>
-        :root { --primary: #2563eb; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --border: #334155; --danger: #ef4444; }
-        * { box-sizing: border-box; }
-        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; }
-        .container { max-width: 1000px; width: 100%; }
-        
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border); padding-bottom: 20px; margin-bottom: 20px; }
-        .status-badge { background: rgba(37, 99, 235, 0.2); color: #60a5fa; padding: 5px 15px; border-radius: 20px; font-weight: bold; border: 1px solid var(--primary); }
+        :root {
+            --primary: #8b5cf6; /* Roxo Gemini */
+            --primary-hover: #7c3aed;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --input-bg: #0b1120;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --danger: #ef4444;
+            --success: #10b981;
+            --gradient: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+        }
 
+        * { box-sizing: border-box; outline: none; }
+        body { background-color: var(--bg); color: var(--text-main); font-family: 'Inter', sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; min-height: 100vh; }
+        .container { max-width: 1200px; width: 100%; }
+
+        /* HEADER */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; background: var(--card-bg); padding: 20px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .brand { display: flex; align-items: center; gap: 15px; }
+        .brand i { font-size: 1.8em; color: var(--primary); }
+        .brand h1 { margin: 0; font-size: 1.5em; font-weight: 700; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        .status-badge { background: rgba(139, 92, 246, 0.1); color: var(--primary); padding: 8px 20px; border-radius: 30px; font-weight: 600; border: 1px solid rgba(139, 92, 246, 0.3); display: flex; align-items: center; gap: 8px; }
+        .status-dot { width: 8px; height: 8px; background: var(--primary); border-radius: 50%; box-shadow: 0 0 10px var(--primary); }
+        .status-dot.offline { background: var(--danger); box-shadow: 0 0 10px var(--danger); }
+
+        /* NAVIGATION */
         .nav { display: flex; gap: 10px; margin-bottom: 25px; overflow-x: auto; padding-bottom: 5px; }
-        .nav-btn { flex: 1; min-width: 110px; background: var(--card); border: 1px solid var(--border); color: #94a3b8; padding: 15px; cursor: pointer; border-radius: 10px; font-weight: 600; transition: all 0.3s; }
-        .nav-btn:hover { border-color: var(--primary); color: white; }
-        .nav-btn.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3); }
+        .nav-btn { flex: 1; min-width: 120px; background: var(--card-bg); border: 1px solid var(--border); color: var(--text-muted); padding: 15px; cursor: pointer; border-radius: 12px; font-weight: 600; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .nav-btn:hover { border-color: var(--primary); color: white; transform: translateY(-2px); }
+        .nav-btn.active { background: var(--gradient); color: white; border-color: transparent; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4); }
 
-        .tab { display: none; animation: fadeIn 0.3s; }
+        /* TABS */
+        .tab { display: none; animation: fadeIn 0.4s ease-out; }
         .tab.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .card { background: var(--card); padding: 25px; border-radius: 15px; border: 1px solid var(--border); margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
-        h2 { margin-top: 0; color: #60a5fa; border-left: 4px solid var(--primary); padding-left: 10px; }
+        /* CARDS & FORMS */
+        .card { background: var(--card-bg); padding: 25px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 20px; position: relative; }
+        h2 { margin-top: 0; color: white; font-size: 1.3em; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
         
-        label { display: block; margin: 15px 0 5px; font-size: 0.9em; color: #cbd5e1; font-weight: 500; }
-        input, select, textarea { width: 100%; padding: 12px; background: #020617; border: 1px solid var(--border); color: white; border-radius: 8px; font-family: inherit; transition: 0.2s; }
-        input:focus, select:focus, textarea:focus { border-color: var(--primary); outline: none; }
+        label { display: block; margin: 15px 0 8px; font-size: 0.9em; color: var(--text-muted); font-weight: 500; }
+        input, select, textarea { width: 100%; padding: 12px; background: var(--input-bg); border: 1px solid var(--border); color: white; border-radius: 8px; font-family: inherit; font-size: 0.95em; transition: 0.3s; }
+        input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2); }
         
-        button.action { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 20px; transition: 0.2s; }
-        button.action:hover { background: #1d4ed8; }
+        button.action { width: 100%; padding: 14px; background: var(--gradient); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 25px; font-size: 1em; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
+        button.action:hover { opacity: 0.9; transform: scale(0.99); }
 
-        .item-list { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
-        .item { background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid transparent; }
-        .item:hover { border-color: var(--border); background: rgba(255,255,255,0.05); }
-        
-        .del-btn { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8em; }
-        
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+        /* FILE UPLOAD */
+        .file-upload { border: 2px dashed var(--border); background: rgba(255,255,255,0.02); padding: 20px; text-align: center; border-radius: 12px; cursor: pointer; transition: 0.3s; }
+        .file-upload:hover { border-color: var(--primary); background: rgba(139, 92, 246, 0.05); }
 
-        #qr { border: 8px solid white; border-radius: 10px; }
+        /* LIST & SEARCH */
+        .search-bar { position: relative; margin-bottom: 20px; }
+        .search-bar input { padding-left: 40px; }
+        .search-bar i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+
+        .campaign-item { background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 15px; display: flex; justify-content: space-between; align-items: flex-start; transition: 0.2s; }
+        .campaign-item:hover { border-color: var(--border); background: rgba(255,255,255,0.05); }
+        
+        .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #475569; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--success); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .stats-row { display: flex; gap: 15px; margin-top: 10px; font-size: 0.85em; color: var(--text-muted); flex-wrap: wrap; }
+        .stats-row span { display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 6px; }
+
+        /* QR CODE */
+        #qr-container { text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250px; }
+        #qr { border: 8px solid white; border-radius: 12px; max-width: 200px; display: none; }
+
+        /* AI SPECIFIC */
+        .ai-badge { background: linear-gradient(90deg, #8b5cf6, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <h1><i class="fas fa-gamepad"></i> RPG Admin Pro</h1>
-        <div class="status-badge" id="status">Conectando...</div>
+        <div class="brand">
+            <i class="fas fa-robot"></i>
+            <div>
+                <h1>Sigma Bot AI</h1>
+                <span style="font-size:0.8em; color:var(--text-muted)">Automação & Inteligência Artificial</span>
+            </div>
+        </div>
+        <div class="status-badge" id="status-badge">
+            <div class="status-dot" id="status-dot"></div>
+            <span id="status-text">Conectando...</span>
+        </div>
     </div>
 
     <div class="nav">
-        <button class="nav-btn active" onclick="tab('dash')">Dashboard</button>
-        <button class="nav-btn" onclick="tab('rpg')">Config Jogo</button>
-        <button class="nav-btn" onclick="tab('mob')">Monstros</button>
-        <button class="nav-btn" onclick="tab('item')">Itens</button>
-        <button class="nav-btn" onclick="tab('cmd')">Comandos</button>
+        <button class="nav-btn active" onclick="tab('dash')"><i class="fas fa-chart-pie"></i> Dash</button>
+        <button class="nav-btn" onclick="tab('create')"><i class="fas fa-bullhorn"></i> Criar Campanha</button>
+        <button class="nav-btn" onclick="tab('list')"><i class="fas fa-list"></i> Campanhas</button>
+        <button class="nav-btn" onclick="tab('ai')"><i class="fas fa-brain"></i> Configurar IA</button>
     </div>
 
     <!-- DASHBOARD -->
     <div id="dash" class="tab active">
-        <div class="card" style="text-align:center;">
-            <h3>Conexão WhatsApp</h3>
-            <div style="padding:20px;">
-                <img id="qr" src="" style="display:none; max-width:250px; margin:auto;">
-                <p id="qr-msg">Aguardando código QR...</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- RPG CONFIGS -->
-    <div id="rpg" class="tab">
-        <div class="card">
-            <h2>⚙️ Configurações Gerais</h2>
-            <form id="form-config">
-                <div class="grid-2">
+        <div class="grid-2">
+            <div class="card">
+                <h2><i class="fas fa-chart-line"></i> Métricas Gerais</h2>
+                <div style="display: flex; justify-content: space-around; text-align: center; padding: 20px 0;">
                     <div>
-                        <label>Status do RPG</label>
-                        <select name="active"><option value="true">Ativado</option><option value="false">Desativado</option></select>
+                        <h1 id="total-sent" style="margin:0; font-size:2.5em; color:var(--success)">0</h1>
+                        <span style="color:var(--text-muted)">Enviadas</span>
                     </div>
                     <div>
-                        <label>Cooldown Mineração (s)</label>
-                        <input type="number" name="cooldown" value="60">
+                        <h1 id="total-campaigns" style="margin:0; font-size:2.5em; color:var(--primary)">0</h1>
+                        <span style="color:var(--text-muted)">Campanhas</span>
                     </div>
                 </div>
-                <label>Grupo do Jogo</label>
-                <select name="targetGroup" class="group-select"><option value="">Carregando...</option></select>
-                <button class="action">Salvar Configurações</button>
+            </div>
+            <div class="card">
+                <h2><i class="fas fa-qrcode"></i> Conexão WhatsApp</h2>
+                <div id="qr-container">
+                    <img id="qr" src="">
+                    <i id="check-icon" class="fas fa-check-circle" style="font-size:4em; color:var(--success); display:none;"></i>
+                    <p id="qr-msg" style="margin-top:15px; color:var(--text-muted)">Aguardando...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CRIAR CAMPANHA -->
+    <div id="create" class="tab">
+        <div class="card">
+            <h2><i class="fas fa-plus-circle"></i> Nova Divulgação</h2>
+            <form id="form-campaign">
+                <label>Nome da Campanha</label>
+                <input name="name" placeholder="Ex: Promoção de Natal" required>
+
+                <div class="grid-2">
+                    <div>
+                        <label>Texto (Caption)</label>
+                        <textarea name="text" rows="5" placeholder="Mensagem..."></textarea>
+                    </div>
+                    <div>
+                        <label>Mídia</label>
+                        <div class="file-upload" onclick="document.getElementById('file-input').click()">
+                            <i class="fas fa-cloud-upload-alt" style="font-size:2em; color:var(--primary)"></i>
+                            <p id="file-name" style="margin:10px 0 0; font-size:0.8em">Selecione Imagem/Vídeo</p>
+                            <input type="file" id="file-input" name="media" style="display:none;" accept="image/*,video/*">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <label>Intervalo (Min)</label>
+                        <input type="number" name="interval" value="30" min="1" required>
+                    </div>
+                    <div>
+                        <label>Limite Diário</label>
+                        <input type="number" name="maxPerDay" value="100" required>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <label>Início (Hora)</label>
+                        <input type="time" name="startTime" value="09:00" required>
+                    </div>
+                    <div>
+                        <label>Duração (Dias)</label>
+                        <input type="number" name="durationDays" value="7" required>
+                    </div>
+                </div>
+
+                <label>Grupos Alvo (Segure CTRL para selecionar vários)</label>
+                <select name="targetGroups" class="group-select" multiple style="height: 150px;"></select>
+
+                <button type="submit" class="action">Salvar Campanha</button>
             </form>
         </div>
-
-        <div class="card">
-            <h2>⛏️ Drops de Mineração</h2>
-            <div class="grid-3">
-                <input id="d-name" placeholder="Nome (Ex: Rubi)">
-                <input id="d-icon" placeholder="Ícone (Ex: 🔴)">
-                <input id="d-chance" type="number" placeholder="Chance %">
-            </div>
-            <div class="grid-2" style="margin-top:10px">
-                <input id="d-min" type="number" placeholder="Min Qtd">
-                <input id="d-max" type="number" placeholder="Max Qtd">
-            </div>
-            <input id="d-tier" type="number" placeholder="Tier (1=Comum, 3=Raro)" style="margin-top:10px">
-            <button class="action" onclick="addDrop()">+ Adicionar Drop</button>
-            <div id="list-drops" class="item-list"></div>
-        </div>
     </div>
 
-    <!-- MONSTERS -->
-    <div id="mob" class="tab">
+    <!-- LISTAR CAMPANHAS -->
+    <div id="list" class="tab">
         <div class="card">
-            <h2>👹 Bestiário (Caça)</h2>
-            <div class="grid-3">
-                <input id="m-name" placeholder="Nome (Ex: Lobo)">
-                <input id="m-icon" placeholder="Ícone (Ex: 🐺)">
-                <input id="m-drop" placeholder="Drop (Ex: Couro)">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h2><i class="fas fa-tasks"></i> Gerenciar</h2>
+                <button onclick="loadCampaigns()" style="background:transparent; border:1px solid var(--border); color:white; padding:5px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-sync"></i></button>
             </div>
-            <div class="grid-3" style="margin-top:10px">
-                <input id="m-hp" type="number" placeholder="HP (Vida)">
-                <input id="m-atk" type="number" placeholder="Ataque">
-                <input id="m-xp" type="number" placeholder="XP Ganho">
-            </div>
-            <input id="m-chance" type="number" placeholder="Chance de Encontro %" style="margin-top:10px">
-            <button class="action" onclick="addMob()">+ Adicionar Monstro</button>
-            <div id="list-mobs" class="item-list"></div>
-        </div>
-    </div>
-
-    <!-- CRAFTS / ITEMS -->
-    <div id="item" class="tab">
-        <div class="card">
-            <h2>🛠️ Receitas de Craft</h2>
-            <div class="grid-2">
-                <input id="c-key" placeholder="Comando (ex: pocao_vida)">
-                <input id="c-name" placeholder="Nome (ex: Poção de Vida)">
-            </div>
-            <label>Tipo de Item</label>
-            <select id="c-type">
-                <option value="weapon">Arma (Dá Ataque)</option>
-                <option value="armor">Armadura (Dá Defesa)</option>
-                <option value="consumable">Consumível (Cura HP)</option>
-            </select>
             
-            <div class="grid-2" style="margin-top:10px">
-                <input id="c-val" type="number" placeholder="Valor (Atk/Def/Cura)">
-                <input id="c-cost" placeholder="Custo (Ex: Ouro:1, Carne:2)">
+            <div class="search-bar">
+                <i class="fas fa-search"></i>
+                <input type="text" id="search-input" placeholder="Pesquisar campanha..." onkeyup="filterCampaigns()">
             </div>
-            <p style="font-size:0.8em; color:#64748b; margin-top:5px">Separe custos por vírgula. Use nomes exatos dos drops.</p>
 
-            <button class="action" onclick="addCraft()">+ Criar Receita</button>
-            <div id="list-crafts" class="item-list"></div>
+            <div id="campaign-list"></div>
         </div>
     </div>
 
-    <!-- COMMANDS -->
-    <div id="cmd" class="tab">
+    <!-- CONFIGURAR IA (GEMINI) -->
+    <div id="ai" class="tab">
         <div class="card">
-            <h2>Comandos Gerais</h2>
-            <form id="form-cmd">
-                <input name="trigger" placeholder="!gatilho" required>
-                <input type="hidden" name="type" value="text">
-                <textarea name="response" placeholder="Resposta..." style="margin-top:10px"></textarea>
-                <select name="targetGroup" class="group-select" style="margin-top:10px"><option value="all">Todos</option></select>
-                <button class="action">Salvar</button>
+            <h2><i class="fas fa-brain"></i> Inteligência Artificial <span class="ai-badge">GEMINI</span></h2>
+            <p style="color:var(--text-muted); font-size:0.9em; margin-bottom:20px;">
+                Configure a base de conhecimento da IA. Ela responderá com base nessas informações quando o bot for marcado nos grupos selecionados.
+            </p>
+            
+            <form id="form-ai">
+                <label>Diretrizes e Informações da Empresa (Contexto)</label>
+                <textarea id="ai-context" rows="10" placeholder="Ex: Você é o atendente da Empresa X. Vendemos carros. Nossos preços são... Se perguntarem sobre garantia, responda que..."></textarea>
+                
+                <label>Grupos onde a IA pode responder (Whitelist)</label>
+                <select id="ai-groups" class="group-select" multiple style="height: 150px;"></select>
+                <p style="font-size:0.8em; color:var(--text-muted)">A IA só responderá menções (@bot) nestes grupos.</p>
+
+                <button type="submit" class="action">Salvar Configurações da IA</button>
             </form>
-            <div id="list-cmds" class="item-list"></div>
         </div>
     </div>
 
@@ -176,130 +238,180 @@
 
 <script>
     const socket = io();
-    let db = { rpg: { drops: [], crafts: [], monsters: [] }, commands: [] };
+    let allGroups = [];
 
+    // --- NAVEGAÇÃO ---
     function tab(id) {
         document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
         document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         event.currentTarget.classList.add('active');
+        
+        if(id === 'list') loadCampaigns();
+        if(id === 'ai') loadAIConfig();
+        if(id === 'dash') updateStats();
     }
 
-    // SOCKETS
-    socket.on('status', s => document.getElementById('status').innerText = s);
-    socket.on('qr', u => { 
-        const el = document.getElementById('qr'); 
-        el.src = u || ''; 
-        el.style.display = u ? 'block' : 'none';
-        document.getElementById('qr-msg').innerText = u ? 'Escaneie agora:' : 'Conectado ✅';
+    // --- SOCKETS ---
+    socket.on('status', s => {
+        const txt = document.getElementById('status-text');
+        const dot = document.getElementById('status-dot');
+        txt.innerText = s;
+        if(s.includes('Online')) {
+            dot.classList.remove('offline');
+            document.getElementById('qr').style.display = 'none';
+            document.getElementById('check-icon').style.display = 'block';
+            document.getElementById('qr-msg').innerText = 'Conectado e Operando';
+        } else {
+            dot.classList.add('offline');
+            document.getElementById('check-icon').style.display = 'none';
+        }
     });
+
+    socket.on('qr', u => {
+        const qrEl = document.getElementById('qr');
+        const msg = document.getElementById('qr-msg');
+        if(u) {
+            qrEl.src = u; qrEl.style.display = 'block';
+            document.getElementById('check-icon').style.display = 'none';
+            msg.innerText = 'Escaneie o QR Code';
+        } else {
+            qrEl.style.display = 'none';
+        }
+    });
+
     socket.on('groups', g => {
-        const h = '<option value="">Selecione...</option>' + g.map(x=>`<option value="${x.id}">${x.subject}</option>`).join('');
-        document.querySelectorAll('.group-select').forEach(s => s.innerHTML = h);
-        if(db.rpg && db.rpg.targetGroup) document.querySelector('[name="targetGroup"]').value = db.rpg.targetGroup;
+        allGroups = g;
+        const options = g.map(x => `<option value="${x.id}">${x.subject}</option>`).join('');
+        document.querySelectorAll('.group-select').forEach(s => s.innerHTML = options);
     });
 
-    // DATA LOADING
-    async function load() {
-        db = await (await fetch('/api/data')).json();
-        const rpg = db.rpg || {};
+    // --- UX ARQUIVO ---
+    document.getElementById('file-input').onchange = function() {
+        document.getElementById('file-name').innerText = this.files[0] ? this.files[0].name : 'Arquivo Selecionado';
+    };
 
-        // Settings
-        const form = document.getElementById('form-config');
-        form.active.value = rpg.active ? "true" : "false";
-        form.cooldown.value = rpg.cooldown || 60;
-
-        // Render Lists
-        renderList('list-drops', rpg.drops, (d,i) => `<span>${d.icon} ${d.name} (${d.chance}%)</span>`, 'drops');
-        renderList('list-mobs', rpg.monsters, (m,i) => `<span>${m.icon} ${m.name} (HP:${m.hp})</span>`, 'monsters');
-        renderList('list-crafts', rpg.crafts, (c,i) => {
-            let info = c.type==='weapon'?'⚔️':c.type==='armor'?'🛡️':'🧪';
-            return `<span>${info} ${c.name} (!fazer ${c.key})</span>`;
-        }, 'crafts');
-        renderList('list-cmds', db.commands, (c,i) => `<span><b>${c.trigger}</b></span>`, 'commands', true);
-    }
-
-    function renderList(id, arr, templateFn, type, isCmd=false) {
-        document.getElementById(id).innerHTML = (arr||[]).map((item, i) => `
-            <div class="item">
-                ${templateFn(item, i)}
-                <button class="del-btn" onclick="${isCmd ? 'delCmd('+i+')' : 'delRpg(\''+type+'\','+i+')'}"><i class="fas fa-trash"></i></button>
-            </div>
-        `).join('');
-    }
-
-    // ACTIONS
-    async function saveRpg() { 
-        await fetch('/api/save-rpg', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(db.rpg)}); 
-        load(); 
-    }
-
-    document.getElementById('form-config').onsubmit = function(e) {
+    // --- CAMPANHAS (CRIAR) ---
+    document.getElementById('form-campaign').onsubmit = async function(e) {
         e.preventDefault();
-        db.rpg.active = this.active.value === "true";
-        db.rpg.cooldown = parseInt(this.cooldown.value);
-        db.rpg.targetGroup = this.targetGroup.value;
-        saveRpg();
-        alert('Configurações salvas!');
+        const formData = new FormData(this);
+        
+        const select = this.querySelector('select');
+        const selected = Array.from(select.selectedOptions).map(o => o.value);
+        if(!selected.length) return alert('Selecione ao menos um grupo!');
+        
+        formData.delete('targetGroups');
+        formData.append('targetGroups', JSON.stringify(selected));
+
+        const btn = this.querySelector('button');
+        const oldTxt = btn.innerText;
+        btn.innerText = 'Salvando...'; btn.disabled = true;
+
+        try {
+            const res = await fetch('/api/campaign', { method: 'POST', body: formData });
+            if(res.ok) {
+                alert('Campanha salva com sucesso!');
+                this.reset();
+                document.getElementById('file-name').innerText = 'Selecione Imagem/Vídeo';
+                tab('list');
+            } else throw new Error('Falha no servidor');
+        } catch(err) {
+            alert('Erro ao salvar: ' + err.message);
+        } finally {
+            btn.innerText = oldTxt; btn.disabled = false;
+        }
+    };
+
+    // --- CAMPANHAS (LISTAR) ---
+    async function loadCampaigns() {
+        const res = await fetch('/api/campaigns');
+        const data = await res.json();
+        const container = document.getElementById('campaign-list');
+        
+        if(!data.length) { container.innerHTML = '<p style="text-align:center;color:#64748b">Nenhuma campanha.</p>'; return; }
+
+        container.innerHTML = data.map(c => {
+            const start = new Date(c.createdAt).toLocaleDateString();
+            const end = new Date(c.endDate).toLocaleDateString();
+            const expired = new Date() > new Date(c.endDate);
+            const statusColor = (c.active && !expired) ? 'var(--success)' : 'var(--danger)';
+
+            return `
+            <div class="campaign-item" data-name="${c.name.toLowerCase()}">
+                <div style="flex:1">
+                    <h3 style="margin:0 0 5px 0; color:${statusColor}">${c.name}</h3>
+                    <p style="margin:0; font-size:0.9em; color:#ccc">${c.text ? c.text.substring(0,50)+'...' : 'Apenas Mídia'}</p>
+                    <div class="stats-row">
+                        <span><i class="far fa-calendar"></i> ${start} até ${end}</span>
+                        <span><i class="fas fa-clock"></i> Início: ${c.config.startTime}</span>
+                        <span><i class="fas fa-paper-plane"></i> Hoje: ${c.stats.sentToday}/${c.config.maxPerDay}</span>
+                        <span><i class="fas fa-check-double"></i> Total: ${c.stats.sentTotal}</span>
+                    </div>
+                </div>
+                <div style="text-align:right">
+                     <label class="toggle-switch">
+                        <input type="checkbox" ${c.active && !expired ? 'checked' : ''} ${expired ? 'disabled' : ''} onchange="toggleCamp('${c._id}', this.checked)">
+                        <span class="slider" style="${expired?'opacity:0.5':''}"></span>
+                    </label>
+                    <div style="margin-top:10px;">
+                        <button onclick="deleteCamp('${c._id}')" style="background:none; border:none; color:var(--danger); cursor:pointer;"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
     }
 
-    function addDrop() {
-        const name = document.getElementById('d-name').value;
-        if(!name) return;
-        db.rpg.drops.push({
-            name, icon: document.getElementById('d-icon').value,
-            chance: parseFloat(document.getElementById('d-chance').value),
-            min: parseInt(document.getElementById('d-min').value),
-            max: parseInt(document.getElementById('d-max').value),
-            tier: parseInt(document.getElementById('d-tier').value)
+    function filterCampaigns() {
+        const term = document.getElementById('search-input').value.toLowerCase();
+        document.querySelectorAll('.campaign-item').forEach(item => {
+            item.style.display = item.dataset.name.includes(term) ? 'flex' : 'none';
         });
-        saveRpg();
     }
 
-    function addMob() {
-        const name = document.getElementById('m-name').value;
-        if(!name) return;
-        db.rpg.monsters.push({
-            name, icon: document.getElementById('m-icon').value,
-            drop: document.getElementById('m-drop').value,
-            hp: parseInt(document.getElementById('m-hp').value),
-            atk: parseInt(document.getElementById('m-atk').value),
-            xp: parseInt(document.getElementById('m-xp').value),
-            chance: parseFloat(document.getElementById('m-chance').value)
-        });
-        saveRpg();
+    async function toggleCamp(id, val) { await fetch('/api/toggle', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id, active:val}) }); }
+    async function deleteCamp(id) { if(confirm('Apagar campanha?')) { await fetch('/api/delete-campaign', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); loadCampaigns(); } }
+
+    async function updateStats() {
+        const res = await fetch('/api/campaigns');
+        const data = await res.json();
+        document.getElementById('total-campaigns').innerText = data.length;
+        document.getElementById('total-sent').innerText = data.reduce((a,b)=>a+(b.stats.sentTotal||0),0);
     }
 
-    function addCraft() {
-        const key = document.getElementById('c-key').value;
-        if(!key) return;
-        const type = document.getElementById('c-type').value;
-        const val = parseInt(document.getElementById('c-val').value);
-        const obj = {
-            key, name: document.getElementById('c-name').value, type,
-            cost: document.getElementById('c-cost').value.split(',').map(p => { const[i,q]=p.split(':'); return {item:i.trim(), qtd:parseInt(q)}; })
-        };
-        if(type==='weapon') obj.atk = val;
-        if(type==='armor') obj.def = val;
-        if(type==='consumable') obj.heal = val;
-        db.rpg.crafts.push(obj);
-        saveRpg();
+    // --- IA CONFIG ---
+    async function loadAIConfig() {
+        try {
+            const res = await fetch('/api/ai-config');
+            const data = await res.json();
+            if(data) {
+                document.getElementById('ai-context').value = data.systemInstruction || '';
+                // Selecionar os grupos salvos
+                const select = document.getElementById('ai-groups');
+                Array.from(select.options).forEach(opt => {
+                    opt.selected = data.targetGroups.includes(opt.value);
+                });
+            }
+        } catch(e) { console.log('Sem config de IA ainda'); }
     }
 
-    function delRpg(type, index) { db.rpg[type].splice(index, 1); saveRpg(); }
-
-    // Commands
-    document.getElementById('form-cmd').onsubmit = async function(e) {
+    document.getElementById('form-ai').onsubmit = async function(e) {
         e.preventDefault();
-        await fetch('/api/command', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(Object.fromEntries(new FormData(this)))});
-        this.reset(); load();
-    }
-    async function delCmd(index) {
-        await fetch('/api/delete-command', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({index})});
-        load();
-    }
+        const context = document.getElementById('ai-context').value;
+        const select = document.getElementById('ai-groups');
+        const groups = Array.from(select.selectedOptions).map(o => o.value);
 
-    load();
+        const btn = this.querySelector('button');
+        btn.innerText = 'Salvando...'; btn.disabled = true;
+
+        await fetch('/api/ai-config', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ systemInstruction: context, targetGroups: groups })
+        });
+
+        alert('Configurações da IA salvas! 🧠');
+        btn.innerText = 'Salvar Configurações da IA'; btn.disabled = false;
+    };
 </script>
 </body>
 </html>
