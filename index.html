@@ -5,393 +5,534 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sigma Bot Admin</title>
     
+    <!-- Libs -->
     <script src="/socket.io/socket.io.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --primary: #8b5cf6; /* Roxo Gemini */
-            --primary-hover: #7c3aed;
+            --primary: #6366f1;
+            --secondary: #a855f7;
             --bg: #0f172a;
-            --card-bg: #1e293b;
-            --input-bg: #0b1120;
-            --text-main: #f8fafc;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text: #f8fafc;
             --text-muted: #94a3b8;
-            --border: #334155;
-            --danger: #ef4444;
             --success: #10b981;
-            --gradient: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+            --danger: #ef4444;
+            --gradient: linear-gradient(135deg, var(--primary), var(--secondary));
         }
 
         * { box-sizing: border-box; outline: none; }
-        body { background-color: var(--bg); color: var(--text-main); font-family: 'Inter', sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; min-height: 100vh; }
-        .container { max-width: 1200px; width: 100%; }
+        body { 
+            background: var(--bg); 
+            background-image: radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 20%),
+                              radial-gradient(circle at 90% 80%, rgba(168, 85, 247, 0.15) 0%, transparent 20%);
+            color: var(--text); 
+            font-family: 'Outfit', sans-serif; 
+            margin: 0; 
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
 
-        /* HEADER */
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; background: var(--card-bg); padding: 20px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
-        .brand { display: flex; align-items: center; gap: 15px; }
-        .brand i { font-size: 1.8em; color: var(--primary); }
-        .brand h1 { margin: 0; font-size: 1.5em; font-weight: 700; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .main-wrapper {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 20px;
+        }
 
-        .status-badge { background: rgba(139, 92, 246, 0.1); color: var(--primary); padding: 8px 20px; border-radius: 30px; font-weight: 600; border: 1px solid rgba(139, 92, 246, 0.3); display: flex; align-items: center; gap: 8px; }
-        .status-dot { width: 8px; height: 8px; background: var(--primary); border-radius: 50%; box-shadow: 0 0 10px var(--primary); }
-        .status-dot.offline { background: var(--danger); box-shadow: 0 0 10px var(--danger); }
+        /* --- Header Glass --- */
+        .header {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            padding: 20px 30px;
+            border-radius: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
 
-        /* NAVIGATION */
-        .nav { display: flex; gap: 10px; margin-bottom: 25px; overflow-x: auto; padding-bottom: 5px; }
-        .nav-btn { flex: 1; min-width: 120px; background: var(--card-bg); border: 1px solid var(--border); color: var(--text-muted); padding: 15px; cursor: pointer; border-radius: 12px; font-weight: 600; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .nav-btn:hover { border-color: var(--primary); color: white; transform: translateY(-2px); }
-        .nav-btn.active { background: var(--gradient); color: white; border-color: transparent; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4); }
+        .brand h1 { margin: 0; font-size: 1.5rem; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .status-pill { padding: 8px 16px; border-radius: 50px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); box-shadow: 0 0 10px currentColor; transition: 0.3s; }
+        .dot.online { background: var(--success); color: var(--success); }
+        .dot.offline { background: var(--danger); color: var(--danger); }
 
-        /* TABS */
-        .tab { display: none; animation: fadeIn 0.4s ease-out; }
-        .tab.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* CARDS & FORMS */
-        .card { background: var(--card-bg); padding: 25px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 20px; position: relative; }
-        h2 { margin-top: 0; color: white; font-size: 1.3em; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        /* --- Content Layout --- */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 20px;
+        }
         
-        label { display: block; margin: 15px 0 8px; font-size: 0.9em; color: var(--text-muted); font-weight: 500; }
-        input, select, textarea { width: 100%; padding: 12px; background: var(--input-bg); border: 1px solid var(--border); color: white; border-radius: 8px; font-family: inherit; font-size: 0.95em; transition: 0.3s; }
-        input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2); }
+        @media (max-width: 768px) {
+            .content-grid { grid-template-columns: 1fr; }
+            .header { flex-direction: column; gap: 15px; text-align: center; }
+        }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 20px;
+            height: fit-content;
+        }
+
+        .nav-btn {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            text-align: left;
+            font-size: 1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .nav-btn:hover { background: rgba(255,255,255,0.05); color: var(--text); padding-left: 20px; }
+        .nav-btn.active { background: var(--gradient); color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4); }
+
+        /* --- Panels --- */
+        .panel { display: none; animation: fadeUp 0.4s ease; }
+        .panel.active { display: block; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            padding: 25px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        h2 { margin-top: 0; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px; font-weight: 400; color: white; display: flex; align-items: center; gap: 10px; }
         
-        button.action { width: 100%; padding: 14px; background: var(--gradient); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 25px; font-size: 1em; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
-        button.action:hover { opacity: 0.9; transform: scale(0.99); }
+        /* Inputs & Forms */
+        label { display: block; margin: 15px 0 8px; font-size: 0.9em; color: var(--text-muted); }
+        input, select, textarea { 
+            width: 100%; padding: 12px; 
+            background: rgba(0,0,0,0.3); 
+            border: 1px solid var(--glass-border); 
+            color: white; border-radius: 10px; 
+            font-family: inherit; transition: 0.3s; 
+        }
+        input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
 
-        /* FILE UPLOAD */
-        .file-upload { border: 2px dashed var(--border); background: rgba(255,255,255,0.02); padding: 20px; text-align: center; border-radius: 12px; cursor: pointer; transition: 0.3s; }
-        .file-upload:hover { border-color: var(--primary); background: rgba(139, 92, 246, 0.05); }
+        .btn-primary {
+            width: 100%; padding: 14px; background: var(--gradient);
+            color: white; border: none; border-radius: 10px;
+            font-weight: 600; cursor: pointer; margin-top: 20px;
+            transition: 0.3s; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-2px); }
 
-        /* LIST & SEARCH */
-        .search-bar { position: relative; margin-bottom: 20px; }
-        .search-bar input { padding-left: 40px; }
-        .search-bar i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+        /* Logs Terminal */
+        #logs-container {
+            background: #000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            padding: 15px;
+            border-radius: 10px;
+            height: 300px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+            border: 1px solid #333;
+        }
+        .log-entry { margin-bottom: 5px; border-bottom: 1px dashed #333; padding-bottom: 2px; }
 
-        .campaign-item { background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 15px; display: flex; justify-content: space-between; align-items: flex-start; transition: 0.2s; }
-        .campaign-item:hover { border-color: var(--border); background: rgba(255,255,255,0.05); }
-        
-        .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
-        .toggle-switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #475569; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--success); }
-        input:checked + .slider:before { transform: translateX(20px); }
+        /* QR Code */
+        .qr-wrapper { text-align: center; padding: 20px; min-height: 250px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #qr-img { border: 10px solid white; border-radius: 15px; max-width: 200px; }
 
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .stats-row { display: flex; gap: 15px; margin-top: 10px; font-size: 0.85em; color: var(--text-muted); flex-wrap: wrap; }
-        .stats-row span { display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 6px; }
+        /* Campaign List */
+        .campaign-item {
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border: 1px solid transparent;
+            transition: 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .campaign-item:hover { border-color: var(--primary); background: rgba(255,255,255,0.05); }
 
-        /* QR CODE */
-        #qr-container { text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250px; }
-        #qr { border: 8px solid white; border-radius: 12px; max-width: 200px; display: none; }
-
-        /* AI SPECIFIC */
-        .ai-badge { background: linear-gradient(90deg, #8b5cf6, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: bold; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
     </style>
 </head>
 <body>
 
-<div class="container">
+<div class="main-wrapper">
+    <!-- Header -->
     <div class="header">
         <div class="brand">
-            <i class="fas fa-robot"></i>
-            <div>
-                <h1>Sigma Bot AI</h1>
-                <span style="font-size:0.8em; color:var(--text-muted)">Automação & Inteligência Artificial</span>
-            </div>
+            <h1><i class="fas fa-robot"></i> Sigma Bot</h1>
         </div>
-        <div class="status-badge" id="status-badge">
-            <div class="status-dot" id="status-dot"></div>
-            <span id="status-text">Conectando...</span>
-        </div>
-    </div>
-
-    <div class="nav">
-        <button class="nav-btn active" onclick="tab('dash')"><i class="fas fa-chart-pie"></i> Dash</button>
-        <button class="nav-btn" onclick="tab('create')"><i class="fas fa-bullhorn"></i> Criar Campanha</button>
-        <button class="nav-btn" onclick="tab('list')"><i class="fas fa-list"></i> Campanhas</button>
-        <button class="nav-btn" onclick="tab('ai')"><i class="fas fa-brain"></i> Configurar IA</button>
-    </div>
-
-    <!-- DASHBOARD -->
-    <div id="dash" class="tab active">
-        <div class="grid-2">
-            <div class="card">
-                <h2><i class="fas fa-chart-line"></i> Métricas Gerais</h2>
-                <div style="display: flex; justify-content: space-around; text-align: center; padding: 20px 0;">
-                    <div>
-                        <h1 id="total-sent" style="margin:0; font-size:2.5em; color:var(--success)">0</h1>
-                        <span style="color:var(--text-muted)">Enviadas</span>
-                    </div>
-                    <div>
-                        <h1 id="total-campaigns" style="margin:0; font-size:2.5em; color:var(--primary)">0</h1>
-                        <span style="color:var(--text-muted)">Campanhas</span>
-                    </div>
-                </div>
+        <div style="display: flex; gap: 15px; align-items: center;">
+            <div class="status-pill">
+                <div class="dot" id="status-dot"></div>
+                <span id="status-text">Conectando...</span>
             </div>
-            <div class="card">
-                <h2><i class="fas fa-qrcode"></i> Conexão WhatsApp</h2>
-                <div id="qr-container">
-                    <img id="qr" src="">
-                    <i id="check-icon" class="fas fa-check-circle" style="font-size:4em; color:var(--success); display:none;"></i>
-                    <p id="qr-msg" style="margin-top:15px; color:var(--text-muted)">Aguardando...</p>
-                </div>
-            </div>
+            <button onclick="logout()" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; padding: 8px 15px; border-radius: 8px; cursor: pointer;">
+                <i class="fas fa-power-off"></i>
+            </button>
         </div>
     </div>
 
-    <!-- CRIAR CAMPANHA -->
-    <div id="create" class="tab">
-        <div class="card">
-            <h2><i class="fas fa-plus-circle"></i> Nova Divulgação</h2>
-            <form id="form-campaign">
-                <label>Nome da Campanha</label>
-                <input name="name" placeholder="Ex: Promoção de Natal" required>
+    <div class="content-grid">
+        <!-- Sidebar Navigation -->
+        <div class="sidebar">
+            <button class="nav-btn active" onclick="showPanel('dash', this)"><i class="fas fa-chart-pie"></i> Dashboard</button>
+            <button class="nav-btn" onclick="showPanel('create', this)"><i class="fas fa-plus-circle"></i> Criar Campanha</button>
+            <button class="nav-btn" onclick="showPanel('list', this)"><i class="fas fa-list-ul"></i> Minhas Campanhas</button>
+            <button class="nav-btn" onclick="showPanel('ai', this)"><i class="fas fa-brain"></i> Configuração IA</button>
+            <button class="nav-btn" onclick="showPanel('logs', this)"><i class="fas fa-terminal"></i> Terminal Logs</button>
+        </div>
 
-                <div class="grid-2">
-                    <div>
-                        <label>Texto (Caption)</label>
-                        <textarea name="text" rows="5" placeholder="Mensagem..."></textarea>
-                    </div>
-                    <div>
-                        <label>Mídia</label>
-                        <div class="file-upload" onclick="document.getElementById('file-input').click()">
-                            <i class="fas fa-cloud-upload-alt" style="font-size:2em; color:var(--primary)"></i>
-                            <p id="file-name" style="margin:10px 0 0; font-size:0.8em">Selecione Imagem/Vídeo</p>
-                            <input type="file" id="file-input" name="media" style="display:none;" accept="image/*,video/*">
+        <!-- Panels Content -->
+        <div class="panels-container">
+            
+            <!-- Dashboard -->
+            <div id="dash" class="panel active">
+                <div class="card">
+                    <h2><i class="fas fa-wifi"></i> Conexão WhatsApp</h2>
+                    <div class="qr-wrapper">
+                        <img id="qr-img" style="display: none;">
+                        <div id="connected-view" style="display: none; text-align: center;">
+                            <i class="fas fa-check-circle" style="font-size: 4rem; color: var(--success); margin-bottom: 15px;"></i>
+                            <h3 style="margin:0">Bot Operacional</h3>
+                            <p style="color: var(--text-muted);">Pronto para enviar mensagens e responder com IA.</p>
                         </div>
+                        <p id="qr-msg" style="margin-top: 15px;">Aguardando QR Code...</p>
                     </div>
                 </div>
 
-                <div class="grid-2">
-                    <div>
-                        <label>Intervalo (Min)</label>
-                        <input type="number" name="interval" value="30" min="1" required>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="card">
+                        <h2><i class="fas fa-paper-plane"></i> Envios Totais</h2>
+                        <h1 id="total-sent" style="font-size: 3rem; margin: 20px 0; color: var(--success)">0</h1>
                     </div>
-                    <div>
-                        <label>Limite Diário</label>
-                        <input type="number" name="maxPerDay" value="100" required>
-                    </div>
-                </div>
-
-                <div class="grid-2">
-                    <div>
-                        <label>Início (Hora)</label>
-                        <input type="time" name="startTime" value="09:00" required>
-                    </div>
-                    <div>
-                        <label>Duração (Dias)</label>
-                        <input type="number" name="durationDays" value="7" required>
+                    <div class="card">
+                        <h2><i class="fas fa-tasks"></i> Campanhas Ativas</h2>
+                        <h1 id="total-active" style="font-size: 3rem; margin: 20px 0; color: var(--primary)">0</h1>
                     </div>
                 </div>
-
-                <label>Grupos Alvo (Segure CTRL para selecionar vários)</label>
-                <select name="targetGroups" class="group-select" multiple style="height: 150px;"></select>
-
-                <button type="submit" class="action">Salvar Campanha</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- LISTAR CAMPANHAS -->
-    <div id="list" class="tab">
-        <div class="card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                <h2><i class="fas fa-tasks"></i> Gerenciar</h2>
-                <button onclick="loadCampaigns()" style="background:transparent; border:1px solid var(--border); color:white; padding:5px 10px; border-radius:6px; cursor:pointer;"><i class="fas fa-sync"></i></button>
-            </div>
-            
-            <div class="search-bar">
-                <i class="fas fa-search"></i>
-                <input type="text" id="search-input" placeholder="Pesquisar campanha..." onkeyup="filterCampaigns()">
             </div>
 
-            <div id="campaign-list"></div>
+            <!-- Create Campaign -->
+            <div id="create" class="panel">
+                <div class="card">
+                    <h2>Nova Campanha de Marketing</h2>
+                    <form id="form-campaign">
+                        <label>Nome da Campanha</label>
+                        <input name="name" placeholder="Ex: Black Friday 2024" required>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div>
+                                <label>Mídia (Opcional)</label>
+                                <input type="file" name="media" accept="image/*,video/*">
+                            </div>
+                            <div>
+                                <label>Texto / Legenda</label>
+                                <textarea name="text" rows="1" placeholder="Olá, confira nossas ofertas..."></textarea>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div>
+                                <label>Intervalo (Minutos)</label>
+                                <input type="number" name="interval" value="30" min="1" required>
+                            </div>
+                            <div>
+                                <label>Limite Diário</label>
+                                <input type="number" name="maxPerDay" value="100" required>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div>
+                                <label>Hora de Início</label>
+                                <input type="time" name="startTime" value="09:00" required>
+                            </div>
+                            <div>
+                                <label>Duração (Dias)</label>
+                                <input type="number" name="durationDays" value="5" required>
+                            </div>
+                        </div>
+
+                        <label>Grupos Alvo</label>
+                        <select name="targetGroups" class="group-select" multiple style="height: 150px; background: rgba(0,0,0,0.2);"></select>
+                        
+                        <button type="submit" class="btn-primary">Lançar Campanha</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- List Campaigns -->
+            <div id="list" class="panel">
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between;">
+                        <h2>Gerenciar Campanhas</h2>
+                        <button onclick="loadCampaigns()" style="background:transparent; border:none; color:white; cursor:pointer"><i class="fas fa-sync"></i></button>
+                    </div>
+                    <div id="campaign-list-container" style="margin-top: 20px;">
+                        <!-- JS fills this -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Config -->
+            <div id="ai" class="panel">
+                <div class="card">
+                    <h2><i class="fas fa-robot"></i> Cérebro da IA (Gemini)</h2>
+                    <form id="form-ai">
+                        <label>Prompt do Sistema (Personalidade e Dados)</label>
+                        <textarea id="ai-context" rows="8" placeholder="Você é um assistente virtual da loja X... Nossos produtos são..."></textarea>
+                        
+                        <label>Grupos Permitidos (Whitelist)</label>
+                        <select id="ai-groups" class="group-select" multiple style="height: 150px;"></select>
+                        
+                        <button type="submit" class="btn-primary">Salvar Cérebro</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Logs -->
+            <div id="logs" class="panel">
+                <div class="card">
+                    <h2><i class="fas fa-code"></i> Terminal do Sistema</h2>
+                    <div id="logs-container"></div>
+                    <button onclick="document.getElementById('logs-container').innerHTML=''" style="margin-top:10px; background:transparent; border:1px solid #333; color:#ccc; padding:5px 10px; cursor:pointer; border-radius:5px;">Limpar Logs</button>
+                </div>
+            </div>
+
         </div>
     </div>
-
-    <!-- CONFIGURAR IA (GEMINI) -->
-    <div id="ai" class="tab">
-        <div class="card">
-            <h2><i class="fas fa-brain"></i> Inteligência Artificial <span class="ai-badge">GEMINI</span></h2>
-            <p style="color:var(--text-muted); font-size:0.9em; margin-bottom:20px;">
-                Configure a base de conhecimento da IA. Ela responderá com base nessas informações quando o bot for marcado nos grupos selecionados.
-            </p>
-            
-            <form id="form-ai">
-                <label>Diretrizes e Informações da Empresa (Contexto)</label>
-                <textarea id="ai-context" rows="10" placeholder="Ex: Você é o atendente da Empresa X. Vendemos carros. Nossos preços são... Se perguntarem sobre garantia, responda que..."></textarea>
-                
-                <label>Grupos onde a IA pode responder (Whitelist)</label>
-                <select id="ai-groups" class="group-select" multiple style="height: 150px;"></select>
-                <p style="font-size:0.8em; color:var(--text-muted)">A IA só responderá menções (@bot) nestes grupos.</p>
-
-                <button type="submit" class="action">Salvar Configurações da IA</button>
-            </form>
-        </div>
-    </div>
-
 </div>
 
 <script>
     const socket = io();
-    let allGroups = [];
-
-    // --- NAVEGAÇÃO ---
-    function tab(id) {
-        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-        document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    
+    // --- UI LOGIC ---
+    function showPanel(id, btn) {
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(id).classList.add('active');
-        event.currentTarget.classList.add('active');
+        if(btn) btn.classList.add('active');
         
         if(id === 'list') loadCampaigns();
         if(id === 'ai') loadAIConfig();
-        if(id === 'dash') updateStats();
     }
 
-    // --- SOCKETS ---
-    socket.on('status', s => {
-        const txt = document.getElementById('status-text');
+    function updateStatusUI(status, isConnected) {
         const dot = document.getElementById('status-dot');
-        txt.innerText = s;
-        if(s.includes('Online')) {
-            dot.classList.remove('offline');
-            document.getElementById('qr').style.display = 'none';
-            document.getElementById('check-icon').style.display = 'block';
-            document.getElementById('qr-msg').innerText = 'Conectado e Operando';
-        } else {
-            dot.classList.add('offline');
-            document.getElementById('check-icon').style.display = 'none';
-        }
-    });
-
-    socket.on('qr', u => {
-        const qrEl = document.getElementById('qr');
+        const txt = document.getElementById('status-text');
+        const qrImg = document.getElementById('qr-img');
+        const connView = document.getElementById('connected-view');
         const msg = document.getElementById('qr-msg');
-        if(u) {
-            qrEl.src = u; qrEl.style.display = 'block';
-            document.getElementById('check-icon').style.display = 'none';
-            msg.innerText = 'Escaneie o QR Code';
+
+        txt.innerText = status;
+        
+        if (isConnected) {
+            dot.classList.remove('offline');
+            dot.classList.add('online');
+            qrImg.style.display = 'none';
+            connView.style.display = 'block';
+            msg.style.display = 'none';
         } else {
-            qrEl.style.display = 'none';
+            dot.classList.remove('online');
+            dot.classList.add('offline');
+            connView.style.display = 'none';
+            msg.style.display = 'block';
+            // Se estiver "Offline", QR fica oculto até o servidor mandar um novo
+            if(status.includes('Offline') || status.includes('Desconectado')) {
+                qrImg.style.display = 'none';
+                msg.innerText = "Servidor desconectado ou reiniciando...";
+            }
+        }
+    }
+
+    // --- SOCKET EVENTS ---
+    
+    // CORREÇÃO PRINCIPAL: Detecta queda de conexão do Socket.io
+    socket.on('disconnect', () => {
+        updateStatusUI('Offline (Socket) 🔴', false);
+    });
+
+    socket.on('connect', () => {
+        // Quando reconecta o socket, pede status atual
+    });
+
+    socket.on('status', (s) => {
+        const isOnline = s.includes('Online');
+        updateStatusUI(s, isOnline);
+    });
+
+    socket.on('qr', (url) => {
+        const qrImg = document.getElementById('qr-img');
+        const msg = document.getElementById('qr-msg');
+        if(url) {
+            qrImg.src = url;
+            qrImg.style.display = 'block';
+            document.getElementById('connected-view').style.display = 'none';
+            msg.style.display = 'block';
+            msg.innerText = 'Escaneie o QR Code no WhatsApp';
         }
     });
 
-    socket.on('groups', g => {
-        allGroups = g;
-        const options = g.map(x => `<option value="${x.id}">${x.subject}</option>`).join('');
-        document.querySelectorAll('.group-select').forEach(s => s.innerHTML = options);
+    socket.on('groups', (groups) => {
+        const html = groups.map(g => `<option value="${g.id}">${g.subject}</option>`).join('');
+        document.querySelectorAll('.group-select').forEach(s => s.innerHTML = html);
     });
 
-    // --- UX ARQUIVO ---
-    document.getElementById('file-input').onchange = function() {
-        document.getElementById('file-name').innerText = this.files[0] ? this.files[0].name : 'Arquivo Selecionado';
-    };
+    socket.on('log', (msg) => {
+        const box = document.getElementById('logs-container');
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.innerText = msg;
+        box.prepend(entry); // Log mais novo no topo
+    });
 
-    // --- CAMPANHAS (CRIAR) ---
+    // --- FUNCTIONS ---
+    
+    function logout() {
+        Swal.fire({
+            title: 'Desconectar?',
+            text: "Isso vai encerrar a sessão do WhatsApp.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: 'Sim, Desconectar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                socket.emit('logout');
+                updateStatusUI('Desconectando...', false);
+            }
+        })
+    }
+
+    // Form Campanhas
     document.getElementById('form-campaign').onsubmit = async function(e) {
         e.preventDefault();
-        const formData = new FormData(this);
         
         const select = this.querySelector('select');
         const selected = Array.from(select.selectedOptions).map(o => o.value);
-        if(!selected.length) return alert('Selecione ao menos um grupo!');
-        
+        if(!selected.length) return Swal.fire('Erro', 'Selecione pelo menos um grupo!', 'error');
+
+        const formData = new FormData(this);
         formData.delete('targetGroups');
         formData.append('targetGroups', JSON.stringify(selected));
 
-        const btn = this.querySelector('button');
-        const oldTxt = btn.innerText;
-        btn.innerText = 'Salvando...'; btn.disabled = true;
-
         try {
             const res = await fetch('/api/campaign', { method: 'POST', body: formData });
-            if(res.ok) {
-                alert('Campanha salva com sucesso!');
+            const json = await res.json();
+            if(json.success) {
+                Swal.fire('Sucesso!', 'Campanha criada e agendada.', 'success');
                 this.reset();
-                document.getElementById('file-name').innerText = 'Selecione Imagem/Vídeo';
-                tab('list');
-            } else throw new Error('Falha no servidor');
-        } catch(err) {
-            alert('Erro ao salvar: ' + err.message);
-        } finally {
-            btn.innerText = oldTxt; btn.disabled = false;
-        }
+                showPanel('list');
+            } else {
+                Swal.fire('Erro', json.error || 'Falha desconhecida', 'error');
+            }
+        } catch(err) { Swal.fire('Erro', err.message, 'error'); }
     };
 
-    // --- CAMPANHAS (LISTAR) ---
+    // Listar Campanhas
     async function loadCampaigns() {
         const res = await fetch('/api/campaigns');
         const data = await res.json();
-        const container = document.getElementById('campaign-list');
+        const container = document.getElementById('campaign-list-container');
         
-        if(!data.length) { container.innerHTML = '<p style="text-align:center;color:#64748b">Nenhuma campanha.</p>'; return; }
+        // Update stats dash
+        document.getElementById('total-active').innerText = data.filter(c => c.active).length;
+        document.getElementById('total-sent').innerText = data.reduce((a,b) => a + (b.stats.sentTotal || 0), 0);
+
+        if(!data.length) return container.innerHTML = '<p class="text-center text-muted">Nenhuma campanha encontrada.</p>';
 
         container.innerHTML = data.map(c => {
-            const start = new Date(c.createdAt).toLocaleDateString();
-            const end = new Date(c.endDate).toLocaleDateString();
-            const expired = new Date() > new Date(c.endDate);
-            const statusColor = (c.active && !expired) ? 'var(--success)' : 'var(--danger)';
-
+            const progress = (c.stats.sentTotal / (c.targetGroups.length * 100)) * 100; // Fake progress logic, just visual
             return `
-            <div class="campaign-item" data-name="${c.name.toLowerCase()}">
-                <div style="flex:1">
-                    <h3 style="margin:0 0 5px 0; color:${statusColor}">${c.name}</h3>
-                    <p style="margin:0; font-size:0.9em; color:#ccc">${c.text ? c.text.substring(0,50)+'...' : 'Apenas Mídia'}</p>
-                    <div class="stats-row">
-                        <span><i class="far fa-calendar"></i> ${start} até ${end}</span>
-                        <span><i class="fas fa-clock"></i> Início: ${c.config.startTime}</span>
-                        <span><i class="fas fa-paper-plane"></i> Hoje: ${c.stats.sentToday}/${c.config.maxPerDay}</span>
-                        <span><i class="fas fa-check-double"></i> Total: ${c.stats.sentTotal}</span>
+            <div class="campaign-item">
+                <div>
+                    <h3 style="margin:0; color:white;">${c.name}</h3>
+                    <small style="color:var(--text-muted)">${c.text ? c.text.substring(0,40)+'...' : 'Apenas Mídia'}</small>
+                    <div style="margin-top:5px; font-size:0.8rem; display:flex; gap:10px;">
+                        <span><i class="fas fa-clock"></i> ${c.config.interval}min</span>
+                        <span><i class="fas fa-check"></i> Enviados: ${c.stats.sentTotal}</span>
                     </div>
                 </div>
-                <div style="text-align:right">
-                     <label class="toggle-switch">
-                        <input type="checkbox" ${c.active && !expired ? 'checked' : ''} ${expired ? 'disabled' : ''} onchange="toggleCamp('${c._id}', this.checked)">
-                        <span class="slider" style="${expired?'opacity:0.5':''}"></span>
-                    </label>
-                    <div style="margin-top:10px;">
-                        <button onclick="deleteCamp('${c._id}')" style="background:none; border:none; color:var(--danger); cursor:pointer;"><i class="fas fa-trash"></i></button>
-                    </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <button onclick="toggleCamp('${c._id}', ${!c.active})" style="background:${c.active ? 'var(--success)' : '#475569'}; color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;">
+                        ${c.active ? 'Ativa' : 'Pausada'}
+                    </button>
+                    <button onclick="deleteCamp('${c._id}')" style="background:transparent; border:none; color:var(--danger); cursor:pointer;"><i class="fas fa-trash"></i></button>
                 </div>
             </div>`;
         }).join('');
     }
 
-    function filterCampaigns() {
-        const term = document.getElementById('search-input').value.toLowerCase();
-        document.querySelectorAll('.campaign-item').forEach(item => {
-            item.style.display = item.dataset.name.includes(term) ? 'flex' : 'none';
+    async function toggleCamp(id, active) {
+        await fetch('/api/toggle', { 
+            method:'POST', headers:{'Content-Type':'application/json'}, 
+            body:JSON.stringify({id, active}) 
         });
+        loadCampaigns();
     }
 
-    async function toggleCamp(id, val) { await fetch('/api/toggle', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id, active:val}) }); }
-    async function deleteCamp(id) { if(confirm('Apagar campanha?')) { await fetch('/api/delete-campaign', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) }); loadCampaigns(); } }
-
-    async function updateStats() {
-        const res = await fetch('/api/campaigns');
-        const data = await res.json();
-        document.getElementById('total-campaigns').innerText = data.length;
-        document.getElementById('total-sent').innerText = data.reduce((a,b)=>a+(b.stats.sentTotal||0),0);
+    async function deleteCamp(id) {
+        Swal.fire({
+            title: 'Tem certeza?',
+            text: "Não será possível reverter!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sim, apagar'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                await fetch('/api/delete-campaign', { 
+                    method:'POST', headers:{'Content-Type':'application/json'}, 
+                    body:JSON.stringify({id}) 
+                });
+                loadCampaigns();
+                Swal.fire('Deletado!', 'A campanha foi removida.', 'success');
+            }
+        })
     }
 
-    // --- IA CONFIG ---
+    // Config IA
     async function loadAIConfig() {
-        try {
-            const res = await fetch('/api/ai-config');
-            const data = await res.json();
-            if(data) {
-                document.getElementById('ai-context').value = data.systemInstruction || '';
-                // Selecionar os grupos salvos
-                const select = document.getElementById('ai-groups');
+        const res = await fetch('/api/ai-config');
+        const data = await res.json();
+        if(data.systemInstruction) {
+            document.getElementById('ai-context').value = data.systemInstruction;
+            const select = document.getElementById('ai-groups');
+            // Timeout pequeno para garantir que os grupos carregaram via socket
+            setTimeout(() => {
                 Array.from(select.options).forEach(opt => {
                     opt.selected = data.targetGroups.includes(opt.value);
                 });
-            }
-        } catch(e) { console.log('Sem config de IA ainda'); }
+            }, 500);
+        }
     }
 
     document.getElementById('form-ai').onsubmit = async function(e) {
@@ -400,18 +541,14 @@
         const select = document.getElementById('ai-groups');
         const groups = Array.from(select.selectedOptions).map(o => o.value);
 
-        const btn = this.querySelector('button');
-        btn.innerText = 'Salvando...'; btn.disabled = true;
-
         await fetch('/api/ai-config', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ systemInstruction: context, targetGroups: groups })
         });
-
-        alert('Configurações da IA salvas! 🧠');
-        btn.innerText = 'Salvar Configurações da IA'; btn.disabled = false;
+        Swal.fire('Configurado!', 'A IA foi atualizada com sucesso.', 'success');
     };
+
 </script>
 </body>
 </html>

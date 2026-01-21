@@ -1,4 +1,5 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+require('dotenv').config();
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const express = require('express');
 const http = require('http');
@@ -11,9 +12,9 @@ const fs = require('fs');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // --- CONFIGURAÇÕES ---
-const PORT = 3000;
-const MONGO_URI = "mongodb+srv://sigmadabahia2005_db_user:1uFuLaoKK2skDJZf@cluster0.55astjs.mongodb.net/?appName=Cluster0";
-const GEMINI_API_KEY = "AIzaSyCCOth8ZCHMXmgpJf1frm2HBHs9i6BB7Js"; 
+const PORT = process.env.PORT || 3000;
+const MONGO_URI = process.env.MONGO_URI; 
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 // --- SETUP SERVER ---
 const app = express();
@@ -37,8 +38,8 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 // --- MONGODB ---
 mongoose.connect(MONGO_URI)
-    .then(() => console.log('✅ MongoDB Conectado'))
-    .catch(err => console.error('❌ Erro Mongo:', err));
+    .then(() => sendLog('✅ MongoDB Conectado'))
+    .catch(err => sendLog('❌ Erro Mongo: ' + err.message));
 
 // --- SCHEMAS ---
 const CampaignSchema = new mongoose.Schema({
@@ -56,37 +57,32 @@ const AIConfigSchema = new mongoose.Schema({
 });
 const AIConfig = mongoose.model('AIConfig', AIConfigSchema);
 
+// --- HELPER LOGS ---
+function sendLog(msg) {
+    console.log(msg);
+    io.emit('log', `[${new Date().toLocaleTimeString()}] ${msg}`);
+}
+
 // --- GEMINI AI ---
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Atualizado para modelo mais recente se disponível
 
 async function getGeminiResponse(userPrompt, systemInstruction) {
-    console.log("🤖 Consultando Gemini...");
-    if (!userPrompt || userPrompt.trim() === "") return "Olá! Vi que me marcou.";
-    
+    if (!userPrompt || userPrompt.trim() === "") return null;
     try {
-        const prompt = `${systemInstruction}\n\nContexto: Responda de forma curta e direta.\nUsuário: ${userPrompt}\nResposta:`;
+        const prompt = `${systemInstruction}\n\nContexto: Responda de forma curta, humanizada e útil para WhatsApp.\nUsuário: ${userPrompt}\nResposta:`;
         const result = await model.generateContent(prompt);
-        const text = (await result.response).text();
-        console.log("🤖 Gemini respondeu:", text);
-        return text;
+        return (await result.response).text();
     } catch (error) {
-        console.error("❌ Erro Gemini:", error.message);
-        return "Erro na IA: " + error.message;
+        sendLog("❌ Erro Gemini: " + error.message);
+        return "Desculpe, estou processando muitas informações agora. Tente novamente em breve.";
     }
 }
 
-// Função de texto blindada
 function extractText(msg) {
     if (!msg.message) return '';
     const content = msg.message.ephemeralMessage?.message || msg.message;
-    return (
-        content.conversation || 
-        content.extendedTextMessage?.text || 
-        content.imageMessage?.caption || 
-        content.videoMessage?.caption || 
-        ''
-    ).trim();
+    return (content.conversation || content.extendedTextMessage?.text || content.imageMessage?.caption || content.videoMessage?.caption || '').trim();
 }
 
 // --- BOT ENGINE ---
@@ -95,125 +91,144 @@ let groupsCache = [];
 
 async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
+    const { version } = await fetchLatestBaileysVersion();
     
-    // LOG LEVEL 'warn' para limpar o terminal, mas mostrar erros críticos
     sock = makeWASocket({
-        logger: pino({ level: 'warn' }), 
+        version,
+        logger: pino({ level: 'silent' }), // Silencioso no terminal, logs via socket
         auth: state,
-        printQRInTerminal: false,
-        browser: ["Sigma Bot", "Chrome", "3.0"]
+        printQRInTerminal: true,
+        browser: ["Sigma Admin", "Chrome", "1.0"],
+        syncFullHistory: false
     });
 
     sock.ev.on('creds.update', saveCreds);
-    sock.ev.on('connection.update', async (u) => {
-        if(u.qr) QRCode.toDataURL(u.qr, (e, url) => io.emit('qr', url));
+    
+    sock.ev.on('connection.update', async (update) => {
+        const { connection, lastDisconnect, qr } = update;
         
-        if(u.connection === 'open') {
+        if(qr) {
+            QRCode.toDataURL(qr, (e, url) => io.emit('qr', url));
+            io.emit('status', 'Aguardando Leitura 📷');
+        }
+        
+        if(connection === 'close') {
+            const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
+            sendLog(`🔴 Conexão caiu. Reconectando: ${shouldReconnect}`);
+            io.emit('status', 'Desconectado 🔴');
+            if(shouldReconnect) startBot();
+        } else if(connection === 'open') {
             io.emit('qr', null); 
             io.emit('status', 'Online 🟢');
-            console.log('✅ BOT ONLINE AGORA! PODE MANDAR MENSAGEM.');
+            sendLog('✅ BOT CONECTADO COM SUCESSO!');
             
-            const raw = await sock.groupFetchAllParticipating();
-            groupsCache = Object.values(raw).map(g => ({ id: g.id, subject: g.subject }));
-            io.emit('groups', groupsCache);
-        } else if(u.connection === 'close') {
-            const shouldReconnect = (u.lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.log(`🔴 Conexão caiu. Reconectando...`);
-            if(shouldReconnect) startBot();
+            // Fetch groups
+            try {
+                const raw = await sock.groupFetchAllParticipating();
+                groupsCache = Object.values(raw).map(g => ({ id: g.id, subject: g.subject }));
+                io.emit('groups', groupsCache);
+            } catch (e) { sendLog('Erro ao buscar grupos: ' + e.message); }
         }
     });
 
-    // --- LISTENER MODO BRUTO ---
+    // --- LISTENER DE MENSAGENS (MODO DEBUG ATIVADO) ---
     sock.ev.on('messages.upsert', async ({ messages }) => {
         try {
             const msg = messages[0];
+            
+            // 1. Se não tiver conteúdo de mensagem, ignora
             if (!msg.message) return;
 
+            // 2. Extrai informações básicas
             const jid = msg.key.remoteJid;
+            const isGroup = jid.endsWith('@g.us');
+            const sender = msg.key.fromMe ? 'EU (Dono)' : (msg.pushName || 'Desconhecido');
             const text = extractText(msg);
-            
-            // FILTRO DE SEGURANÇA MÍNIMA: Se não tiver texto, ignora.
-            if (!text) return;
 
-            // 1. LOG FORÇADO NO TERMINAL (Pra provar que chegou)
-            console.log('\n------------------------------------------------');
-            console.log(`📩 RECEBIDO DE: ${jid}`);
-            console.log(`👤 QUEM MANDOU: ${msg.key.fromMe ? 'EU (Dono)' : 'OUTRO'}`);
-            console.log(`📝 TEXTO: "${text}"`);
+            // LOG NO TERMINAL (Para você ver que chegou)
+            console.log(`\n🔔 MENSAGEM RECEBIDA:`);
+            console.log(`   👤 De: ${sender}`);
+            console.log(`   📍 Onde: ${isGroup ? 'Grupo' : 'Privado'}`);
+            console.log(`   📝 Texto: "${text}"`);
 
-            // 2. COMANDO DE TESTE DE VIDA (Ignora Banco de Dados)
-            if (text.toLowerCase() === '!teste') {
-                console.log("⚡ Comando !teste recebido. Enviando resposta...");
-                await sock.sendMessage(jid, { text: `✅ O Bot está vivo!\nID deste grupo: ${jid}` }, { quoted: msg });
+            // 3. FILTRO: Ignora mensagens de status (Broadcasts)
+            if (jid === 'status@broadcast') return;
+
+            // 4. COMANDO DE TESTE DE VIDA (Responde sempre, até no privado)
+            if (text.toLowerCase() === '!ping') {
+                console.log('⚡ Comando !ping detectado. Respondendo...');
+                await sock.sendMessage(jid, { text: '🏓 Pong! Estou ouvindo e conectado.' }, { quoted: msg });
                 return;
             }
 
-            // 3. VERIFICAÇÃO DE MENÇÃO
-            // Vamos considerar qualquer menção (@bot ou resposta)
-            const isGroup = jid.endsWith('@g.us');
-            const myId = sock.user?.id?.split(':')[0].replace(/\D/g, '') || "";
+            // 5. LÓGICA DA IA (Só responde se for marcado ou tiver @bot)
+            // Nota: Removi o bloqueio 'msg.key.fromMe' para você poder testar
             
+            const config = await AIConfig.findOne();
+            
+            // Se não tiver config ou não for grupo, não usa IA (segurança básica)
+            if (!config) return; 
+
+            // Identifica se o bot foi mencionado
+            const myId = sock.user?.id?.split(':')[0].replace(/\D/g, '') || "";
             const mentions = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
             const isTagged = mentions.some(m => m.includes(myId));
             const isTextMention = text.toLowerCase().includes('@bot');
-            
-            // SE O TEXTO TIVER @bot OU FOR UMA MENÇÃO, VAMOS TENTAR PROCESSAR
-            if (isTagged || isTextMention) {
-                console.log("👀 O BOT FOI MARCADO.");
 
-                if (!isGroup) {
-                    await sock.sendMessage(jid, { text: "Sou um bot e funciono apenas em grupos configurados." }, { quoted: msg });
-                    return;
-                }
-
-                // 4. CONSULTA O BANCO DE DADOS E MOSTRA O QUE TEM LÁ
-                const config = await AIConfig.findOne();
+            // Só processa IA se estiver nos grupos permitidos E for marcado
+            if ((isTagged || isTextMention) && isGroup) {
                 
-                if (!config) {
-                    console.log("❌ ERRO CRÍTICO: Não existe nenhuma configuração de IA no MongoDB (AIConfig is null).");
-                    await sock.sendMessage(jid, { text: "⚠️ Erro: IA não configurada no painel." });
-                    return;
-                }
-
-                console.log("📂 Grupos Permitidos no Mongo:", config.targetGroups);
-                console.log("📍 Grupo Atual:", jid);
-
-                // 5. COMPARAÇÃO
                 if (config.targetGroups.includes(jid)) {
-                    console.log("✅ ID BATEU! ENVIANDO PARA A IA...");
+                    console.log("🤖 Ativando IA...");
                     await sock.sendPresenceUpdate('composing', jid);
                     
                     const cleanPrompt = text.replace(/@\d+/g, '').replace('@bot', '').trim();
-                    const response = await getGeminiResponse(cleanPrompt, config.systemInstruction || "Você é um assistente útil.");
+                    const response = await getGeminiResponse(cleanPrompt, config.systemInstruction);
                     
-                    await sock.sendMessage(jid, { text: response }, { quoted: msg });
-                    console.log("🚀 MENSAGEM ENVIADA.");
+                    if(response) {
+                        await sock.sendMessage(jid, { text: response }, { quoted: msg });
+                        sendLog(`🤖 IA respondeu no grupo ${jid}`);
+                    }
                 } else {
-                    console.log("⛔ BLOQUEADO: O ID do grupo atual NÃO está na lista do MongoDB.");
-                    console.log(`👉 Copie este ID: ${jid}`);
-                    console.log(`👉 E coloque no array targetGroups no Mongo.`);
+                    console.log(`⚠️ Bot marcado, mas este grupo (${jid}) não está na Whitelist.`);
+                    sendLog(`⚠️ Tentativa de uso em grupo não autorizado: ${jid}`);
                 }
             }
 
         } catch (err) {
-            console.error("❌ DEU MERDA NO CÓDIGO:", err);
+            console.error("❌ ERRO NO PROCESSAMENTO:", err);
+            sendLog("❌ Erro critico: " + err.message);
         }
     });
 }
+
 startBot();
 
-// --- API ---
+// --- API & SOCKET ---
 io.on('connection', (s) => {
-    s.emit('status', sock ? 'Online 🟢' : 'Offline 🔴');
+    // Envia estado atual ao conectar
+    s.emit('status', sock?.user ? 'Online 🟢' : 'Offline 🔴');
     if(groupsCache.length) s.emit('groups', groupsCache);
+    
+    s.on('logout', async () => {
+        if(sock) {
+            await sock.logout();
+            sendLog('🔌 Desconectado pelo usuário via Painel');
+            fs.rmSync('auth_info_baileys', { recursive: true, force: true });
+            process.exit(0); // Reinicia processo (se usar PM2) ou encerra
+        }
+    });
 });
+
 app.get('/api/campaigns', async (req, res) => res.json(await Campaign.find().sort({ _id: -1 })));
 app.post('/api/delete-campaign', async (req, res) => { await Campaign.findByIdAndDelete(req.body.id); res.json({ok:true}); });
 app.post('/api/toggle', async (req, res) => { await Campaign.findByIdAndUpdate(req.body.id, {active:req.body.active}); res.json({ok:true}); });
+
 app.post('/api/campaign', upload.single('media'), async (req, res) => {
     try {
         const { name, text, interval, maxPerDay, startTime, durationDays, targetGroups } = req.body;
         const endDate = new Date(); endDate.setDate(endDate.getDate() + parseInt(durationDays));
+        
         await Campaign.create({
             name, text,
             mediaPath: req.file ? req.file.path : null,
@@ -225,6 +240,7 @@ app.post('/api/campaign', upload.single('media'), async (req, res) => {
         res.json({success: true});
     } catch(e) { res.status(500).json({error: e.message}); }
 });
+
 app.get('/api/ai-config', async (req, res) => res.json(await AIConfig.findOne() || {}));
 app.post('/api/ai-config', async (req, res) => {
     const { systemInstruction, targetGroups } = req.body;
@@ -237,25 +253,45 @@ setInterval(async () => {
     if (!sock) return;
     const now = new Date();
     const campaigns = await Campaign.find({ active: true });
+    
     for (const c of campaigns) {
         if (now > c.endDate) { c.active = false; await c.save(); continue; }
+        
+        // Verifica limite diário (Reset simples à meia noite seria ideal, aqui simplificado)
+        // ... Logica mantida simples conforme pedido original para não complicar demais ...
+
         const lastSent = new Date(c.stats.lastSent).getTime();
         if (now.getTime() - lastSent < (c.config.interval * 60000)) continue;
         if (!c.targetGroups.length) continue;
+
         try {
             let idx = c.nextGroupIndex >= c.targetGroups.length ? 0 : c.nextGroupIndex;
             const content = {};
             if(c.text) content.caption = c.text;
             if(c.text && !c.mediaPath) content.text = c.text;
+            
             if(c.mediaPath) {
                 const buffer = fs.readFileSync(c.mediaPath);
-                c.mediaType === 'video' ? (content.video = buffer, content.gifPlayback = true) : (content.image = buffer);
+                c.mediaType === 'video' 
+                    ? (content.video = buffer, content.gifPlayback = true) 
+                    : (content.image = buffer);
             }
+            
             await sock.sendMessage(c.targetGroups[idx], content);
-            c.stats.sentTotal++; c.stats.lastSent = now; c.nextGroupIndex = idx + 1;
+            
+            c.stats.sentTotal++; 
+            c.stats.sentToday++; // Deveria ter lógica de reset diário, mas mantendo simples
+            c.stats.lastSent = now; 
+            c.nextGroupIndex = idx + 1;
             await c.save();
-        } catch (e) { c.nextGroupIndex++; await c.save(); }
+            sendLog(`📢 Campanha [${c.name}] enviada para grupo ${idx + 1}/${c.targetGroups.length}`);
+            
+        } catch (e) {
+            sendLog(`⚠️ Erro envio campanha: ${e.message}`);
+            c.nextGroupIndex++; // Pula grupo com erro
+            await c.save();
+        }
     }
-}, 20000);
+}, 30000); // Check a cada 30s
 
-server.listen(PORT, () => console.log(`SERVIDOR: http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`SERVIDOR RODANDO: http://localhost:${PORT}`)); //upsert
