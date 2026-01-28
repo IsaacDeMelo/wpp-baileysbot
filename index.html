@@ -3,35 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sigma Bot Admin</title>
+    <title>Academy Bot - Admin</title>
     
     <!-- Libs -->
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --primary: #6366f1;
-            --secondary: #a855f7;
-            --bg: #0f172a;
-            --glass-bg: rgba(30, 41, 59, 0.7);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --text: #f8fafc;
-            --text-muted: #94a3b8;
+            /* Palette Academy */
+            --bg-body: #050505;
+            --bg-panel: #121214;
+            --bg-card: #1c1c1f;
+            --primary: #7c3aed; /* Roxo Academy */
+            --primary-hover: #6d28d9;
+            --accent: #fbbf24; /* Dourado */
+            --text-main: #ffffff;
+            --text-muted: #a1a1aa;
+            --border: #27272a;
             --success: #10b981;
             --danger: #ef4444;
-            --gradient: linear-gradient(135deg, var(--primary), var(--secondary));
         }
 
-        * { box-sizing: border-box; outline: none; }
+        * { box-sizing: border-box; outline: none; font-family: 'Poppins', sans-serif; }
+        
         body { 
-            background: var(--bg); 
-            background-image: radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 20%),
-                              radial-gradient(circle at 90% 80%, rgba(168, 85, 247, 0.15) 0%, transparent 20%);
-            color: var(--text); 
-            font-family: 'Outfit', sans-serif; 
+            background-color: var(--bg-body);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(124, 58, 237, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(251, 191, 36, 0.05) 0%, transparent 40%);
+            color: var(--text-main);
             margin: 0; 
             min-height: 100vh;
             display: flex;
@@ -39,516 +42,509 @@
             padding: 20px;
         }
 
+        /* --- LOGIN --- */
+        #login-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 9999;
+            backdrop-filter: blur(10px);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .login-box {
+            background: var(--bg-card); 
+            padding: 50px; 
+            border-radius: 16px;
+            border: 1px solid var(--border); 
+            width: 100%; 
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            border-top: 4px solid var(--primary);
+        }
+
+        /* --- LAYOUT --- */
         .main-wrapper {
             width: 100%;
-            max-width: 1200px;
-            display: grid;
-            grid-template-rows: auto 1fr;
+            max-width: 1400px;
+            display: none; 
+            grid-template-columns: 260px 1fr;
+            grid-template-rows: 80px 1fr;
             gap: 20px;
+            height: 95vh;
         }
 
-        /* --- Header Glass --- */
+        /* HEADER */
         .header {
-            background: var(--glass-bg);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--glass-border);
-            padding: 20px 30px;
-            border-radius: 20px;
+            grid-column: 1 / -1;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            justify-content: space-between;
+            padding: 0 30px;
         }
+        .brand h1 { 
+            font-size: 1.4rem; 
+            font-weight: 700; 
+            letter-spacing: 1px;
+            color: white;
+            text-transform: uppercase;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .brand i { color: var(--primary); }
 
-        .brand h1 { margin: 0; font-size: 1.5rem; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .status-pill { padding: 8px 16px; border-radius: 50px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); }
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); box-shadow: 0 0 10px currentColor; transition: 0.3s; }
-        .dot.online { background: var(--success); color: var(--success); }
-        .dot.offline { background: var(--danger); color: var(--danger); }
+        .status-badge {
+            background: rgba(255,255,255,0.05);
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            display: flex; align-items: center; gap: 8px;
+            border: 1px solid var(--border);
+        }
+        .led { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 10px currentColor; }
+        .led.on { background: var(--success); color: var(--success); }
+        .led.off { background: var(--danger); color: var(--danger); }
 
-        /* --- Content Layout --- */
-        .content-grid {
-            display: grid;
-            grid-template-columns: 250px 1fr;
-            gap: 20px;
+        /* SIDEBAR */
+        .sidebar {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
         }
         
-        @media (max-width: 768px) {
-            .content-grid { grid-template-columns: 1fr; }
-            .header { flex-direction: column; gap: 15px; text-align: center; }
-        }
-
-        /* --- Sidebar --- */
-        .sidebar {
-            background: var(--glass-bg);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            padding: 20px;
-            height: fit-content;
-        }
-
         .nav-btn {
-            width: 100%;
-            padding: 15px;
-            margin-bottom: 10px;
             background: transparent;
             border: none;
             color: var(--text-muted);
+            padding: 14px 20px;
             text-align: left;
-            font-size: 1rem;
-            border-radius: 12px;
+            font-size: 0.95rem;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 12px;
+            transition: 0.2s;
+            display: flex; align-items: center; gap: 12px;
+            font-weight: 500;
         }
-        .nav-btn:hover { background: rgba(255,255,255,0.05); color: var(--text); padding-left: 20px; }
-        .nav-btn.active { background: var(--gradient); color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4); }
+        .nav-btn:hover { background: rgba(255,255,255,0.03); color: white; }
+        .nav-btn.active { 
+            background: var(--primary); 
+            color: white; 
+            box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
+        }
+        .nav-btn i { width: 20px; text-align: center; }
 
-        /* --- Panels --- */
-        .panel { display: none; animation: fadeUp 0.4s ease; }
+        /* CONTENT */
+        .panels-container {
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        
+        .panel { display: none; animation: fadeIn 0.3s ease; }
         .panel.active { display: block; }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         .card {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            padding: 25px;
-            border-radius: 20px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 30px;
             margin-bottom: 20px;
-            position: relative;
-            overflow: hidden;
         }
 
-        h2 { margin-top: 0; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px; font-weight: 400; color: white; display: flex; align-items: center; gap: 10px; }
-        
-        /* Inputs & Forms */
-        label { display: block; margin: 15px 0 8px; font-size: 0.9em; color: var(--text-muted); }
-        input, select, textarea { 
-            width: 100%; padding: 12px; 
-            background: rgba(0,0,0,0.3); 
-            border: 1px solid var(--glass-border); 
-            color: white; border-radius: 10px; 
-            font-family: inherit; transition: 0.3s; 
+        h2 { 
+            margin-top: 0; 
+            font-size: 1.2rem; 
+            border-bottom: 1px solid var(--border); 
+            padding-bottom: 15px; 
+            margin-bottom: 20px;
+            color: var(--accent);
+            display: flex; align-items: center; gap: 10px;
         }
-        input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
+
+        /* FORMS */
+        label { display: block; margin: 15px 0 8px; color: var(--text-muted); font-size: 0.9rem; }
+        input, select, textarea {
+            width: 100%;
+            background: #09090b;
+            border: 1px solid var(--border);
+            color: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            transition: 0.3s;
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+        }
 
         .btn-primary {
-            width: 100%; padding: 14px; background: var(--gradient);
-            color: white; border: none; border-radius: 10px;
-            font-weight: 600; cursor: pointer; margin-top: 20px;
-            transition: 0.3s; text-transform: uppercase; letter-spacing: 1px;
-        }
-        .btn-primary:hover { opacity: 0.9; transform: translateY(-2px); }
-
-        /* Logs Terminal */
-        #logs-container {
-            background: #000;
-            color: #0f0;
-            font-family: 'Courier New', monospace;
-            padding: 15px;
-            border-radius: 10px;
-            height: 300px;
-            overflow-y: auto;
-            font-size: 0.85rem;
-            border: 1px solid #333;
-        }
-        .log-entry { margin-bottom: 5px; border-bottom: 1px dashed #333; padding-bottom: 2px; }
-
-        /* QR Code */
-        .qr-wrapper { text-align: center; padding: 20px; min-height: 250px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        #qr-img { border: 10px solid white; border-radius: 15px; max-width: 200px; }
-
-        /* Campaign List */
-        .campaign-item {
-            background: rgba(255,255,255,0.03);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 10px;
-            border: 1px solid transparent;
+            width: 100%;
+            padding: 12px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
             transition: 0.3s;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
-        .campaign-item:hover { border-color: var(--primary); background: rgba(255,255,255,0.05); }
+        .btn-primary:hover { background: var(--primary-hover); }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+        /* EXTRAS */
+        #qr-img { border: 5px solid white; border-radius: 10px; display: none; }
+        
+        .token-box {
+            background: #09090b; border: 1px dashed var(--accent); 
+            color: var(--accent); padding: 15px; border-radius: 8px; 
+            margin-top: 20px; word-break: break-all; font-family: monospace; display: none;
+        }
+
+        .campaign-item {
+            background: #09090b; border: 1px solid var(--border);
+            padding: 15px; border-radius: 8px; margin-bottom: 10px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .campaign-item h3 { margin: 0; font-size: 1rem; color: white; }
+
+        #logs-container {
+            background: #09090b; border: 1px solid var(--border);
+            height: 400px; overflow-y: auto; padding: 15px; border-radius: 8px;
+            font-family: monospace; font-size: 0.85rem; color: #4ade80;
+        }
+        .log-entry { border-bottom: 1px solid #222; padding: 4px 0; }
+
+        @media (max-width: 900px) {
+            .main-wrapper { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; }
+            .header { grid-column: 1; }
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-body); }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
     </style>
 </head>
 <body>
 
-<div class="main-wrapper">
-    <!-- Header -->
-    <div class="header">
-        <div class="brand">
-            <h1><i class="fas fa-robot"></i> Sigma Bot</h1>
-        </div>
-        <div style="display: flex; gap: 15px; align-items: center;">
-            <div class="status-pill">
-                <div class="dot" id="status-dot"></div>
-                <span id="status-text">Conectando...</span>
-            </div>
-            <button onclick="logout()" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; padding: 8px 15px; border-radius: 8px; cursor: pointer;">
-                <i class="fas fa-power-off"></i>
-            </button>
+    <div id="login-overlay">
+        <div class="login-box">
+            <h1 style="color:white; margin:0 0 10px 0;"><i class="fas fa-shield-alt" style="color:var(--primary)"></i> ACADEMY</h1>
+            <p style="color: var(--text-muted); margin-bottom: 30px;">Acesso Administrativo</p>
+            <input type="password" id="admin-pass" placeholder="Senha Mestra">
+            <button class="btn-primary" onclick="doLogin()">Entrar</button>
         </div>
     </div>
 
-    <div class="content-grid">
-        <!-- Sidebar Navigation -->
-        <div class="sidebar">
-            <button class="nav-btn active" onclick="showPanel('dash', this)"><i class="fas fa-chart-pie"></i> Dashboard</button>
-            <button class="nav-btn" onclick="showPanel('create', this)"><i class="fas fa-plus-circle"></i> Criar Campanha</button>
-            <button class="nav-btn" onclick="showPanel('list', this)"><i class="fas fa-list-ul"></i> Minhas Campanhas</button>
-            <button class="nav-btn" onclick="showPanel('ai', this)"><i class="fas fa-brain"></i> Configuração IA</button>
-            <button class="nav-btn" onclick="showPanel('logs', this)"><i class="fas fa-terminal"></i> Terminal Logs</button>
+    <div class="main-wrapper" id="main-app">
+        <div class="header">
+            <div class="brand">
+                <h1><i class="fas fa-cube"></i> Academy Bot</h1>
+            </div>
+            <div style="display: flex; gap: 20px; align-items: center;">
+                <div class="status-badge">
+                    <div class="led" id="status-dot"></div>
+                    <span id="status-text">Desconectado</span>
+                </div>
+                <button onclick="doLogout()" style="background:transparent; border:1px solid var(--danger); color:var(--danger); padding:8px 12px; border-radius:6px; cursor:pointer;">
+                    <i class="fas fa-power-off"></i>
+                </button>
+            </div>
         </div>
 
-        <!-- Panels Content -->
+        <div class="sidebar">
+            <button class="nav-btn active" onclick="showPanel('dash', this)"><i class="fas fa-chart-line"></i> Dashboard</button>
+            <button class="nav-btn" onclick="showPanel('tokens', this)"><i class="fas fa-key"></i> Grupos & Tokens</button>
+            <button class="nav-btn" onclick="showPanel('comms', this)"><i class="fas fa-project-diagram"></i> Comunidades</button>
+            <button class="nav-btn" onclick="showPanel('create', this)"><i class="fas fa-bullhorn"></i> Criar Campanha</button>
+            <button class="nav-btn" onclick="showPanel('list', this)"><i class="fas fa-tasks"></i> Campanhas Ativas</button>
+            <button class="nav-btn" onclick="showPanel('ai', this)"><i class="fas fa-microchip"></i> Cérebro Global</button>
+            <button class="nav-btn" onclick="showPanel('logs', this)"><i class="fas fa-terminal"></i> Terminal</button>
+        </div>
+
         <div class="panels-container">
             
-            <!-- Dashboard -->
+            <!-- DASHBOARD -->
             <div id="dash" class="panel active">
-                <div class="card">
-                    <h2><i class="fas fa-wifi"></i> Conexão WhatsApp</h2>
-                    <div class="qr-wrapper">
-                        <img id="qr-img" style="display: none;">
-                        <div id="connected-view" style="display: none; text-align: center;">
-                            <i class="fas fa-check-circle" style="font-size: 4rem; color: var(--success); margin-bottom: 15px;"></i>
-                            <h3 style="margin:0">Bot Operacional</h3>
-                            <p style="color: var(--text-muted);">Pronto para enviar mensagens e responder com IA.</p>
+                <div class="card" style="text-align: center;">
+                    <h2><i class="fas fa-wifi"></i> Status do Sistema</h2>
+                    <img id="qr-img">
+                    <div id="connected-view" style="display: none;">
+                        <div style="width:80px; height:80px; background:rgba(16, 185, 129, 0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 20px;">
+                            <i class="fas fa-check" style="font-size: 2.5rem; color: var(--success);"></i>
                         </div>
-                        <p id="qr-msg" style="margin-top: 15px;">Aguardando QR Code...</p>
+                        <h3 style="margin:0; color:white;">Sistema Operacional</h3>
+                        <p style="color: var(--text-muted);">Bot conectado e pronto para comandos.</p>
                     </div>
+                    <p id="qr-msg" style="color:var(--text-muted); margin-top:20px;">Aguardando conexão...</p>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                     <div class="card">
-                        <h2><i class="fas fa-paper-plane"></i> Envios Totais</h2>
-                        <h1 id="total-sent" style="font-size: 3rem; margin: 20px 0; color: var(--success)">0</h1>
+                        <h2 style="color:var(--text-main)"><i class="fas fa-layer-group" style="color:var(--primary)"></i> Total Grupos</h2>
+                        <h1 id="total-groups" style="font-size: 3rem; margin: 10px 0; color:white;">0</h1>
                     </div>
                     <div class="card">
-                        <h2><i class="fas fa-tasks"></i> Campanhas Ativas</h2>
-                        <h1 id="total-active" style="font-size: 3rem; margin: 20px 0; color: var(--primary)">0</h1>
+                        <h2 style="color:var(--text-main)"><i class="fas fa-robot" style="color:var(--accent)"></i> IAs Ativas</h2>
+                        <h1 id="total-active-ai" style="font-size: 3rem; margin: 10px 0; color:white;">0</h1>
                     </div>
                 </div>
             </div>
 
-            <!-- Create Campaign -->
+            <!-- TOKENS -->
+            <div id="tokens" class="panel">
+                <div class="card">
+                    <h2><i class="fas fa-lock"></i> Acesso aos Líderes</h2>
+                    <p>Gere um token de acesso para que o dono do grupo possa configurar sua própria IA.</p>
+                    
+                    <label>Selecione o Grupo</label>
+                    <select id="group-select-token"><option>Carregando...</option></select>
+                    
+                    <button class="btn-primary" onclick="generateToken()">Gerar Token Único</button>
+                    <div id="token-result" class="token-box"></div>
+                </div>
+            </div>
+
+            <!-- COMUNIDADES -->
+            <div id="comms" class="panel">
+                <div class="card">
+                    <h2><i class="fas fa-network-wired"></i> Criar Comunidade</h2>
+                    <p>Interligue grupos para compartilhar banimentos e regras.</p>
+                    <div style="display: flex; gap: 10px;">
+                        <input id="comm-name" placeholder="Nome da Comunidade">
+                        <button onclick="createComm()" class="btn-primary" style="margin:0; width:auto;">Criar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MARKETING -->
             <div id="create" class="panel">
                 <div class="card">
-                    <h2>Nova Campanha de Marketing</h2>
+                    <h2><i class="fas fa-paper-plane"></i> Disparo em Massa</h2>
                     <form id="form-campaign">
                         <label>Nome da Campanha</label>
-                        <input name="name" placeholder="Ex: Black Friday 2024" required>
+                        <input name="name" required placeholder="Identificação interna">
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
                             <div>
                                 <label>Mídia (Opcional)</label>
-                                <input type="file" name="media" accept="image/*,video/*">
+                                <input type="file" name="media">
                             </div>
                             <div>
-                                <label>Texto / Legenda</label>
-                                <textarea name="text" rows="1" placeholder="Olá, confira nossas ofertas..."></textarea>
+                                <label>Legenda / Texto</label>
+                                <textarea name="text" rows="1"></textarea>
                             </div>
                         </div>
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
                             <div>
-                                <label>Intervalo (Minutos)</label>
-                                <input type="number" name="interval" value="30" min="1" required>
+                                <label>Intervalo (min)</label>
+                                <input type="number" name="interval" value="30">
                             </div>
                             <div>
-                                <label>Limite Diário</label>
-                                <input type="number" name="maxPerDay" value="100" required>
-                            </div>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                            <div>
-                                <label>Hora de Início</label>
-                                <input type="time" name="startTime" value="09:00" required>
-                            </div>
-                            <div>
-                                <label>Duração (Dias)</label>
-                                <input type="number" name="durationDays" value="5" required>
+                                <label>Alvos</label>
+                                <select name="targetGroups" class="group-select" multiple style="height:100px;"></select>
                             </div>
                         </div>
-
-                        <label>Grupos Alvo</label>
-                        <select name="targetGroups" class="group-select" multiple style="height: 150px; background: rgba(0,0,0,0.2);"></select>
-                        
-                        <button type="submit" class="btn-primary">Lançar Campanha</button>
+                        <button class="btn-primary">Iniciar Campanha</button>
                     </form>
                 </div>
             </div>
 
-            <!-- List Campaigns -->
+            <!-- LISTA CAMPANHAS -->
             <div id="list" class="panel">
                 <div class="card">
-                    <div style="display:flex; justify-content:space-between;">
-                        <h2>Gerenciar Campanhas</h2>
-                        <button onclick="loadCampaigns()" style="background:transparent; border:none; color:white; cursor:pointer"><i class="fas fa-sync"></i></button>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h2><i class="fas fa-list"></i> Campanhas</h2>
+                        <button onclick="loadCampaigns()" style="background:transparent; border:none; color:white; cursor:pointer;"><i class="fas fa-sync"></i></button>
                     </div>
-                    <div id="campaign-list-container" style="margin-top: 20px;">
-                        <!-- JS fills this -->
-                    </div>
+                    <div id="campaign-list-container" style="margin-top:20px;"></div>
                 </div>
             </div>
 
-            <!-- AI Config -->
+            <!-- IA GLOBAL -->
             <div id="ai" class="panel">
                 <div class="card">
-                    <h2><i class="fas fa-robot"></i> Cérebro da IA (Gemini)</h2>
+                    <h2><i class="fas fa-brain"></i> Personalidade Padrão</h2>
+                    <p>Esta configuração será usada se o grupo não tiver uma IA específica.</p>
                     <form id="form-ai">
-                        <label>Prompt do Sistema (Personalidade e Dados)</label>
-                        <textarea id="ai-context" rows="8" placeholder="Você é um assistente virtual da loja X... Nossos produtos são..."></textarea>
+                        <label>Prompt do Sistema</label>
+                        <textarea id="ai-context" rows="10" placeholder="Você é um assistente..."></textarea>
                         
-                        <label>Grupos Permitidos (Whitelist)</label>
-                        <select id="ai-groups" class="group-select" multiple style="height: 150px;"></select>
+                        <label>Whitelist (Grupos Permitidos)</label>
+                        <select id="ai-groups" class="group-select" multiple style="height:150px;"></select>
                         
-                        <button type="submit" class="btn-primary">Salvar Cérebro</button>
+                        <button class="btn-primary">Salvar Configuração Global</button>
                     </form>
                 </div>
             </div>
 
-            <!-- Logs -->
+            <!-- LOGS -->
             <div id="logs" class="panel">
                 <div class="card">
-                    <h2><i class="fas fa-code"></i> Terminal do Sistema</h2>
+                    <h2><i class="fas fa-terminal"></i> Logs do Servidor</h2>
                     <div id="logs-container"></div>
-                    <button onclick="document.getElementById('logs-container').innerHTML=''" style="margin-top:10px; background:transparent; border:1px solid #333; color:#ccc; padding:5px 10px; cursor:pointer; border-radius:5px;">Limpar Logs</button>
+                    <button onclick="document.getElementById('logs-container').innerHTML=''" style="background:transparent; color:#666; border:1px solid #333; margin-top:10px; padding:5px; border-radius:4px; cursor:pointer;">Limpar</button>
                 </div>
             </div>
 
         </div>
     </div>
-</div>
 
 <script>
     const socket = io();
+
+    // AUTH
+    window.onload = () => { if(localStorage.getItem('adminLoggedIn')) showMainApp(); }
     
-    // --- UI LOGIC ---
-    function showPanel(id, btn) {
-        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        if(btn) btn.classList.add('active');
-        
-        if(id === 'list') loadCampaigns();
-        if(id === 'ai') loadAIConfig();
+    async function doLogin() {
+        const pass = document.getElementById('admin-pass').value;
+        const res = await fetch('/api/admin/login', {
+            method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pass})
+        });
+        if((await res.json()).success) {
+            localStorage.setItem('adminLoggedIn', 'true');
+            showMainApp();
+        } else {
+            Swal.fire({icon:'error', title:'Acesso Negado', text:'Senha incorreta', background:'#1c1c1f', color:'#fff'});
+        }
     }
 
-    function updateStatusUI(status, isConnected) {
+    function doLogout() { localStorage.removeItem('adminLoggedIn'); location.reload(); }
+    
+    function showMainApp() {
+        document.getElementById('login-overlay').style.display='none';
+        document.getElementById('main-app').style.display='grid';
+        loadAIConfig();
+    }
+
+    // UI
+    function showPanel(id, btn) {
+        document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        btn.classList.add('active');
+        if(id === 'list') loadCampaigns();
+    }
+
+    function updateStatus(s, online) {
         const dot = document.getElementById('status-dot');
         const txt = document.getElementById('status-text');
-        const qrImg = document.getElementById('qr-img');
-        const connView = document.getElementById('connected-view');
+        const qr = document.getElementById('qr-img');
+        const conn = document.getElementById('connected-view');
         const msg = document.getElementById('qr-msg');
 
-        txt.innerText = status;
-        
-        if (isConnected) {
-            dot.classList.remove('offline');
-            dot.classList.add('online');
-            qrImg.style.display = 'none';
-            connView.style.display = 'block';
-            msg.style.display = 'none';
+        txt.innerText = s;
+        if(online) {
+            dot.className = 'led on';
+            qr.style.display='none';
+            msg.style.display='none';
+            conn.style.display='block';
         } else {
-            dot.classList.remove('online');
-            dot.classList.add('offline');
-            connView.style.display = 'none';
-            msg.style.display = 'block';
-            // Se estiver "Offline", QR fica oculto até o servidor mandar um novo
-            if(status.includes('Offline') || status.includes('Desconectado')) {
-                qrImg.style.display = 'none';
-                msg.innerText = "Servidor desconectado ou reiniciando...";
+            dot.className = 'led off';
+            if(s.includes('Leitura') || s.includes('QR')) {
+                conn.style.display='none';
+                qr.style.display='inline-block';
+                msg.style.display='block';
+                msg.innerText='Escaneie o QR Code';
             }
         }
     }
 
-    // --- SOCKET EVENTS ---
+    // SOCKETS
+    socket.on('disconnect', () => updateStatus('Offline', false));
+    socket.on('status', s => updateStatus(s, s.includes('Online')));
     
-    // CORREÇÃO PRINCIPAL: Detecta queda de conexão do Socket.io
-    socket.on('disconnect', () => {
-        updateStatusUI('Offline (Socket) 🔴', false);
-    });
-
-    socket.on('connect', () => {
-        // Quando reconecta o socket, pede status atual
-    });
-
-    socket.on('status', (s) => {
-        const isOnline = s.includes('Online');
-        updateStatusUI(s, isOnline);
-    });
-
-    socket.on('qr', (url) => {
-        const qrImg = document.getElementById('qr-img');
-        const msg = document.getElementById('qr-msg');
+    // No seu script do HTML
+    socket.on('qr', url => {
         if(url) {
-            qrImg.src = url;
-            qrImg.style.display = 'block';
-            document.getElementById('connected-view').style.display = 'none';
-            msg.style.display = 'block';
-            msg.innerText = 'Escaneie o QR Code no WhatsApp';
+            console.log("QR Recebido no Front!"); // Adicione isso para debug
+            const img = document.getElementById('qr-img');
+            img.src = url;
+            img.style.display = 'inline-block'; // Força a exibição
+            updateStatus('Aguardando Leitura', false);
         }
     });
 
-    socket.on('groups', (groups) => {
-        const html = groups.map(g => `<option value="${g.id}">${g.subject}</option>`).join('');
+    socket.on('groups', list => {
+        const html = list.map(g => `<option value="${g.id}">${g.subject}</option>`).join('');
         document.querySelectorAll('.group-select').forEach(s => s.innerHTML = html);
+        document.getElementById('total-groups').innerText = list.length;
     });
 
-    socket.on('log', (msg) => {
-        const box = document.getElementById('logs-container');
-        const entry = document.createElement('div');
-        entry.className = 'log-entry';
-        entry.innerText = msg;
-        box.prepend(entry); // Log mais novo no topo
+    socket.on('log', msg => {
+        const div = document.createElement('div');
+        div.className = 'log-entry';
+        div.innerText = `> ${msg}`;
+        document.getElementById('logs-container').prepend(div);
     });
 
-    // --- FUNCTIONS ---
-    
-    function logout() {
-        Swal.fire({
-            title: 'Desconectar?',
-            text: "Isso vai encerrar a sessão do WhatsApp.",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#ef4444',
-            confirmButtonText: 'Sim, Desconectar'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                socket.emit('logout');
-                updateStatusUI('Desconectando...', false);
-            }
-        })
-    }
-
-    // Form Campanhas
-    document.getElementById('form-campaign').onsubmit = async function(e) {
-        e.preventDefault();
-        
-        const select = this.querySelector('select');
-        const selected = Array.from(select.selectedOptions).map(o => o.value);
-        if(!selected.length) return Swal.fire('Erro', 'Selecione pelo menos um grupo!', 'error');
-
-        const formData = new FormData(this);
-        formData.delete('targetGroups');
-        formData.append('targetGroups', JSON.stringify(selected));
-
-        try {
-            const res = await fetch('/api/campaign', { method: 'POST', body: formData });
-            const json = await res.json();
-            if(json.success) {
-                Swal.fire('Sucesso!', 'Campanha criada e agendada.', 'success');
-                this.reset();
-                showPanel('list');
-            } else {
-                Swal.fire('Erro', json.error || 'Falha desconhecida', 'error');
-            }
-        } catch(err) { Swal.fire('Erro', err.message, 'error'); }
-    };
-
-    // Listar Campanhas
-    async function loadCampaigns() {
-        const res = await fetch('/api/campaigns');
-        const data = await res.json();
-        const container = document.getElementById('campaign-list-container');
-        
-        // Update stats dash
-        document.getElementById('total-active').innerText = data.filter(c => c.active).length;
-        document.getElementById('total-sent').innerText = data.reduce((a,b) => a + (b.stats.sentTotal || 0), 0);
-
-        if(!data.length) return container.innerHTML = '<p class="text-center text-muted">Nenhuma campanha encontrada.</p>';
-
-        container.innerHTML = data.map(c => {
-            const progress = (c.stats.sentTotal / (c.targetGroups.length * 100)) * 100; // Fake progress logic, just visual
-            return `
-            <div class="campaign-item">
-                <div>
-                    <h3 style="margin:0; color:white;">${c.name}</h3>
-                    <small style="color:var(--text-muted)">${c.text ? c.text.substring(0,40)+'...' : 'Apenas Mídia'}</small>
-                    <div style="margin-top:5px; font-size:0.8rem; display:flex; gap:10px;">
-                        <span><i class="fas fa-clock"></i> ${c.config.interval}min</span>
-                        <span><i class="fas fa-check"></i> Enviados: ${c.stats.sentTotal}</span>
-                    </div>
-                </div>
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <button onclick="toggleCamp('${c._id}', ${!c.active})" style="background:${c.active ? 'var(--success)' : '#475569'}; color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;">
-                        ${c.active ? 'Ativa' : 'Pausada'}
-                    </button>
-                    <button onclick="deleteCamp('${c._id}')" style="background:transparent; border:none; color:var(--danger); cursor:pointer;"><i class="fas fa-trash"></i></button>
-                </div>
-            </div>`;
-        }).join('');
-    }
-
-    async function toggleCamp(id, active) {
-        await fetch('/api/toggle', { 
-            method:'POST', headers:{'Content-Type':'application/json'}, 
-            body:JSON.stringify({id, active}) 
+    // FUNCTIONS
+    async function generateToken() {
+        const sel = document.getElementById('group-select-token');
+        const res = await fetch('/api/admin/generate-token', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({groupJid:sel.value, groupName:sel.options[sel.selectedIndex].text})
         });
-        loadCampaigns();
+        const json = await res.json();
+        if(json.success) {
+            const box = document.getElementById('token-result');
+            box.style.display = 'block';
+            box.innerText = json.token;
+        }
     }
 
-    async function deleteCamp(id) {
-        Swal.fire({
-            title: 'Tem certeza?',
-            text: "Não será possível reverter!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Sim, apagar'
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                await fetch('/api/delete-campaign', { 
-                    method:'POST', headers:{'Content-Type':'application/json'}, 
-                    body:JSON.stringify({id}) 
-                });
-                loadCampaigns();
-                Swal.fire('Deletado!', 'A campanha foi removida.', 'success');
-            }
-        })
-    }
-
-    // Config IA
     async function loadAIConfig() {
         const res = await fetch('/api/ai-config');
         const data = await res.json();
         if(data.systemInstruction) {
             document.getElementById('ai-context').value = data.systemInstruction;
-            const select = document.getElementById('ai-groups');
-            // Timeout pequeno para garantir que os grupos carregaram via socket
+            const sel = document.getElementById('ai-groups');
             setTimeout(() => {
-                Array.from(select.options).forEach(opt => {
-                    opt.selected = data.targetGroups.includes(opt.value);
-                });
-            }, 500);
+                Array.from(sel.options).forEach(o => o.selected = data.allowedGroups?.includes(o.value));
+                document.getElementById('total-active-ai').innerText = data.allowedGroups?.length || 0;
+            }, 1000);
         }
     }
 
-    document.getElementById('form-ai').onsubmit = async function(e) {
+    document.getElementById('form-ai').onsubmit = async (e) => {
         e.preventDefault();
-        const context = document.getElementById('ai-context').value;
-        const select = document.getElementById('ai-groups');
-        const groups = Array.from(select.selectedOptions).map(o => o.value);
-
-        await fetch('/api/ai-config', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ systemInstruction: context, targetGroups: groups })
-        });
-        Swal.fire('Configurado!', 'A IA foi atualizada com sucesso.', 'success');
+        const ctx = document.getElementById('ai-context').value;
+        const groups = Array.from(document.getElementById('ai-groups').selectedOptions).map(o=>o.value);
+        await fetch('/api/ai-config', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({systemInstruction:ctx, allowedGroups:groups}) });
+        Swal.fire({icon:'success', title:'Salvo', background:'#1c1c1f', color:'#fff', confirmButtonColor:'var(--primary)'});
     };
 
+    document.getElementById('form-campaign').onsubmit = async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const groups = Array.from(e.target.querySelector('select').selectedOptions).map(o=>o.value);
+        formData.delete('targetGroups');
+        formData.append('targetGroups', JSON.stringify(groups));
+        
+        const res = await fetch('/api/campaign', { method:'POST', body:formData });
+        if((await res.json()).success) {
+            Swal.fire({icon:'success', title:'Campanha Criada', background:'#1c1c1f', color:'#fff'});
+            e.target.reset();
+        }
+    };
+
+    async function loadCampaigns() {
+        const res = await fetch('/api/campaigns');
+        const data = await res.json();
+        document.getElementById('campaign-list-container').innerHTML = data.map(c => `
+            <div class="campaign-item">
+                <h3 style="color:white">${c.name}</h3>
+                <span style="color:#aaa; font-size:0.8rem">Enviados: ${c.stats.sentTotal}</span>
+            </div>
+        `).join('');
+    }
 </script>
 </body>
 </html>
