@@ -1336,6 +1336,57 @@ async function startBot() {
                 if (comm.imageUrl) opt.image = { url: comm.imageUrl };
                 return sock.sendMessage(jid, opt);
             }
+            // ============================================================
+            // 📖 MANUAL COMPLETO DE COMANDOS (!comandos)
+            // ============================================================
+            if (command === '!comandos') {
+                const manualText = `🏛️ *GUIA DE OPERAÇÕES ACADEMY SYSTEM* 🏛️\n\n` +
+                    `⚖️ *Moderação e Sistema Penal*\n` +
+                    `• *!adv [mencionar/número] | [motivo]:* Aplica uma advertência local (no grupo ou comunidade). Se chegar a 3, o usuário é banido.\n` +
+                    `• *!adv global [mencionar/número] | [motivo] | [duração]:* Aplica uma advertência global. Se chegar a 5, o usuário sofre embargo.\n` +
+                    `• *!rmadv:* Remove advertências (Use: !rmadv @user | local ou global | ID).\n` +
+                    `• *!listadv ou !listaadv:* Lista as advertências locais do usuário.\n` +
+                    `• *!listadv global:* Lista o histórico penal completo em toda a rede.\n` +
+                    `• *!kick [mencionar]:* Remove o usuário (de todos os grupos se houver comunidade).\n` +
+                    `• *!autoban add [mencionar] | [motivo]:* Adiciona à lista negra do grupo.\n` +
+                    `• *!embargo [mencionar/número]:* Consulta o status de banimento global.\n` +
+                    `• *!embargo add [mencionar] | [motivo] | [tempo] | [link]:* Bane da rede Academy e notifica no privado.\n` +
+                    `• *!embargo list:* Lista todos os usuários sob embargo institucional.\n\n` +
+                    `👤 *Perfil e Identidade (RG)*\n` +
+                    `• *!rgperfil [mencionar]:* Gera o RG estilizado (Foto, Cargos, Bio e Histórico).\n` +
+                    `• *!bio [texto]:* Define sua biografia no RG.\n` +
+                    `• *!background ou !capa:* Altera a imagem de fundo do seu RG (enviar imagem com o comando).\n` +
+                    `• *!addcargo [mencionar] [nome do cargo]:* Adiciona um título personalizado ao perfil.\n` +
+                    `• *!rmcargo [mencionar]:* Limpa todos os cargos de um usuário.\n` +
+                    `• *!userg [mencionar]:* Relatório textual detalhado de atividades.\n\n` +
+                    `🧩 *Sistema de Comunidades (Setores)*\n` +
+                    `• *!comunidade criar [nome] | [descrição]:* Cria uma nova comunidade (pode anexar imagem).\n` +
+                    `• *!comunidade addgp [nome]:* Vincula o grupo atual a uma comunidade.\n` +
+                    `• *!comunidade rmvgp:* Remove o grupo atual da comunidade.\n` +
+                    `• *!comunidade [nome]:* Mostra status e estatísticas da comunidade.\n` +
+                    `• *!comunidades:* Lista todas as comunidades e suas atividades.\n\n` +
+                    `📨 *Sistema de Mail (Comunicação)*\n` +
+                    `• *!cadastrargp [nick] | [descrição]:* Registra o grupo para receber e-mails.\n` +
+                    `• *!cadastrarmail:* Ativa sua permissão para envio de e-mails.\n` +
+                    `• *!mail [destino] [assunto] | [mensagem]:* Envia mensagem formal (Suporta: @user, nick do grupo, diretoria, denuncia ou global).\n\n` +
+                    `👑 *Administração e Hierarquia*\n` +
+                    `• *!dev [mencionar]:* Promove a Desenvolvedor (Dono).\n` +
+                    `• *!master [mencionar]:* Promove a Master.\n` +
+                    `• *!canonizar [mencionar]:* Atribui Imunidade Diplomática (Imune a ADVs).\n\n` +
+                    `🛠️ *Utilitários e Ajuda*\n` +
+                    `• *!menu ou !help:* Abre o menu dinâmico de categorias.\n` +
+                    `• *!help add:* Adiciona dinamicamente um comando ao menu.\n` +
+                    `• *!help del:* Remove um comando do menu.\n` +
+                    `• *!sticker:* Converte imagem/vídeo em figurinha.\n` +
+                    `• *!linkimg:* Upload de imagem com link e preview.\n` +
+                    `• *!ping:* Verifica latência do bot.\n` +
+                    `• *!globalusers:* Scanner de todos os usuários (Devs).\n` +
+                    `• *!filtrog [termo]:* Pesquisa usuários no banco (Devs).\n\n` +
+                    `_Academy System v3.0_ 💜`;
+
+                await sock.sendMessage(jid, { text: manualText }, { quoted: msg });
+                return;
+            }
 
             // ============================================================
             // ⏫ FIM DOS COMANDOS ⏫
