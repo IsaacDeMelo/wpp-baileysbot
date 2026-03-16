@@ -3,28 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Academy Bot - Admin</title>
+    <title>Oráculo - Admin</title>
     
     <!-- Libs -->
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            /* Palette Academy */
-            --bg-body: #050505;
-            --bg-panel: #121214;
-            --bg-card: #1c1c1f;
-            --primary: #7c3aed; /* Roxo Academy */
-            --primary-hover: #6d28d9;
-            --accent: #fbbf24; /* Dourado */
-            --text-main: #ffffff;
-            --text-muted: #a1a1aa;
-            --border: #27272a;
-            --success: #10b981;
-            --danger: #ef4444;
+            /* Palette ORÁCULO (fallback) */
+            --bg-body: #000000;
+            --bg-panel: #000000;
+            --bg-card: #000000;
+            --primary: #643CA0;
+            --primary-hover: #64288C;
+            --accent: #F0B450;
+            --text-main: #FAB464;
+            --text-muted: #6478C8;
+            --border: #6464B4;
+            --success: #F0B450;
+            --danger: #6464B4;
         }
 
         * { box-sizing: border-box; outline: none; font-family: 'Poppins', sans-serif; }
@@ -229,14 +230,215 @@
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg-body); }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+        /* --- COMMAND BUILDER --- */
+        .cmd-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            grid-template-rows: auto 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+        .cmd-list {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: #0b0b0e;
+            padding: 15px;
+            height: auto;
+            max-height: 34vh;
+            overflow: auto;
+        }
+        .cmd-toolbar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            padding: 10px 0;
+            background: linear-gradient(180deg, #0b0b0e 70%, rgba(11,11,14,0));
+        }
+        .cmd-toolbar input {
+            flex: 1;
+        }
+        .btn-mini {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid var(--border);
+            color: white;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-mini:hover { border-color: rgba(124,58,237,0.8); }
+        .cmd-item {
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.02);
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: center;
+        }
+        .cmd-item:hover { border-color: rgba(124,58,237,0.6); }
+        .cmd-item.active { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(124,58,237,0.18); }
+        .cmd-tag {
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: var(--accent);
+        }
+        .cmd-muted { color: var(--text-muted); font-size: 0.82rem; }
+        .cmd-editor {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: #0b0b0e;
+            padding: 20px;
+            height: auto;
+            max-height: 72vh;
+            overflow: auto;
+        }
+        .cmd-editor form {
+            padding-bottom: 90px;
+        }
+
+        /* Builder form layout (menos apertado e responsivo) */
+        .cmd-form-grid2 {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 16px;
+        }
+        .cmd-form-grid3 {
+            display: grid;
+            grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.8fr);
+            gap: 16px;
+        }
+        @media (max-width: 900px) {
+            .cmd-form-grid3 {
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            }
+        }
+        @media (max-width: 650px) {
+            .cmd-form-grid2,
+            .cmd-form-grid3 {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+
+        .actions-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+        .actions-toolbar .btn-mini {
+            padding: 9px 10px;
+        }
+
+        .cmd-form-footer {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            margin-top: 12px;
+            padding: 12px 0 4px;
+            position: sticky;
+            bottom: -1px;
+            z-index: 3;
+            background: linear-gradient(180deg, rgba(11,11,14,0.7), rgba(11,11,14,0.98) 35%, #0b0b0e);
+            border-top: 1px solid var(--border);
+            backdrop-filter: blur(6px);
+        }
+        .cmd-form-footer .spacer { flex: 1 1 auto; min-width: 10px; }
+        .cmd-form-footer .cmd-toggle {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin: 0;
+        }
+        .cmd-form-footer .cmd-toggle span { color: var(--text-muted); }
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .chip {
+            background: rgba(124,58,237,0.15);
+            border: 1px solid rgba(124,58,237,0.35);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            user-select: none;
+        }
+        .chip:hover { border-color: rgba(124,58,237,0.75); }
+        .actions {
+            margin-top: 15px;
+        }
+        .action-card {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 12px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015));
+        }
+        .action-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-danger-mini {
+            background: rgba(239,68,68,0.12);
+            border: 1px solid rgba(239,68,68,0.4);
+            color: #fecaca;
+            padding: 8px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .btn-danger-mini:hover { border-color: rgba(239,68,68,0.75); }
+        .preview-box {
+            margin-top: 12px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            background: rgba(255,255,255,0.02);
+            font-family: monospace;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+            line-height: 1.35;
+        }
+        .logs-mini {
+            background: #09090b;
+            border: 1px solid var(--border);
+            height: 260px;
+            overflow: auto;
+            padding: 12px;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            line-height: 1.35;
+        }
+        .log-ok { color: #4ade80; }
+        .log-bad { color: #fca5a5; }
     </style>
+
+    <!-- Premium UI overrides (paleta ORÁCULO + layout SaaS) -->
+    <link rel="stylesheet" href="/public/ui.css">
 </head>
 <body>
 
     <div id="login-overlay">
         <div class="login-box">
-            <h1 style="color:white; margin:0 0 10px 0;"><i class="fas fa-shield-alt" style="color:var(--primary)"></i> ACADEMY</h1>
-            <p style="color: var(--text-muted); margin-bottom: 30px;">Acesso Administrativo</p>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:10px; margin-bottom: 14px;">
+                <img src="/public/oraculo.png" alt="Oráculo" style="width: 140px; height:auto; filter: drop-shadow(0 14px 30px rgba(0,0,0,0.45));" />
+                <div style="color: var(--text-muted); letter-spacing: 0.2px;">Painel Administrativo</div>
+            </div>
             <input type="password" id="admin-pass" placeholder="Senha Mestra">
             <button class="btn-primary" onclick="doLogin()">Entrar</button>
         </div>
@@ -245,7 +447,10 @@
     <div class="main-wrapper" id="main-app">
         <div class="header">
             <div class="brand">
-                <h1><i class="fas fa-cube"></i> Academy Bot</h1>
+                <h1 style="display:flex; align-items:center; gap: 10px;">
+                    <img src="/public/oraculo.png" alt="Oráculo" style="width:34px; height:34px; border-radius: 10px;" />
+                    Oráculo
+                </h1>
             </div>
             <div style="display: flex; gap: 20px; align-items: center;">
                 <div class="status-badge">
@@ -265,6 +470,7 @@
             <button class="nav-btn" onclick="showPanel('create', this)"><i class="fas fa-bullhorn"></i> Criar Campanha</button>
             <button class="nav-btn" onclick="showPanel('list', this)"><i class="fas fa-tasks"></i> Campanhas Ativas</button>
             <button class="nav-btn" onclick="showPanel('ai', this)"><i class="fas fa-microchip"></i> Cérebro Global</button>
+            <!-- Painel de comandos (No-Code) removido: use !autorepo no WhatsApp -->
             <button class="nav-btn" onclick="showPanel('logs', this)"><i class="fas fa-terminal"></i> Terminal</button>
         </div>
 
@@ -349,7 +555,7 @@
                             </div>
                             <div>
                                 <label>Alvos</label>
-                                <select name="targetGroups" class="group-select" multiple style="height:100px;"></select>
+                                <div id="campaign-groups" class="group-checklist" data-role="campaign"></div>
                             </div>
                         </div>
                         <button class="btn-primary">Iniciar Campanha</button>
@@ -378,10 +584,134 @@
                         <textarea id="ai-context" rows="10" placeholder="Você é um assistente..."></textarea>
                         
                         <label>Whitelist (Grupos Permitidos)</label>
-                        <select id="ai-groups" class="group-select" multiple style="height:150px;"></select>
+                        <div id="ai-groups" class="group-checklist" data-role="ai"></div>
                         
                         <button class="btn-primary">Salvar Configuração Global</button>
                     </form>
+                </div>
+            </div>
+
+            <!-- COMANDOS (NO-CODE) -->
+            <div id="commands" class="panel">
+                <div class="card">
+                    <div class="cmd-title-row" style="display:flex; justify-content:space-between; align-items:center; gap: 12px;">
+                        <h2 style="margin:0; flex: 1;"><i class="fas fa-hammer"></i> Command Builder (No-Code)</h2>
+                        <button class="btn-mini" type="button" onclick="showZackTutorial()" title="Guia do Zack">
+                            <i class="fas fa-robot"></i> Guia do Zack
+                        </button>
+                    </div>
+                    <p style="color: var(--text-muted); margin-top:-10px;">Crie/edite comandos sem programar. Use variáveis com {{...}} e clique nos chips para inserir.</p>
+
+                    <div class="cmd-grid">
+                        <div class="cmd-list">
+                            <div class="cmd-toolbar">
+                                <input id="cmd-search" placeholder="Buscar comando..." oninput="filterCommands()" />
+                                <button class="btn-mini" onclick="createNewCommand()"><i class="fas fa-plus"></i></button>
+                                <button class="btn-mini" onclick="exportCommands()"><i class="fas fa-file-export"></i></button>
+                                <button class="btn-mini" onclick="document.getElementById('cmd-import').click()"><i class="fas fa-file-import"></i></button>
+                                <input id="cmd-import" type="file" accept="application/json" style="display:none" onchange="importCommands(event)" />
+                            </div>
+                            <div id="cmd-items"></div>
+                        </div>
+
+                        <div class="cmd-editor">
+                            <div id="cmd-empty" style="color: var(--text-muted);">Selecione um comando para editar ou clique em (+) para criar.</div>
+
+                            <form id="cmd-form" style="display:none" onsubmit="saveCommand(event)">
+                                <div class="cmd-form-grid2">
+                                    <div>
+                                        <label>Trigger (ex: !bomdia)</label>
+                                        <input id="cmd-trigger" placeholder="!bomdia" required />
+                                    </div>
+                                    <div>
+                                        <label>Nome (opcional)</label>
+                                        <input id="cmd-name" placeholder="Bom dia" />
+                                    </div>
+                                </div>
+
+                                <div class="cmd-form-grid3">
+                                    <div>
+                                        <label>Categoria</label>
+                                        <div style="display:flex; gap:10px; align-items:center;">
+                                            <input id="cmd-category" list="cmd-category-presets" placeholder="🧩 DINÂMICO" autocomplete="off" />
+                                            <button class="btn-mini" type="button" onclick="pickCategory()" title="Selecionar categoria">
+                                                <i class="fas fa-layer-group"></i>
+                                            </button>
+                                        </div>
+                                        <datalist id="cmd-category-presets"></datalist>
+                                    </div>
+                                    <div>
+                                        <label>Patente mínima</label>
+                                        <select id="cmd-rank">
+                                            <option value="Membro">Membro</option>
+                                            <option value="Master">Master</option>
+                                            <option value="Coord">Coord</option>
+                                            <option value="Dev">Dev</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label>Cooldown (ms)</label>
+                                        <input id="cmd-cooldown" type="number" value="0" min="0" />
+                                    </div>
+                                </div>
+
+                                <label>Descrição (opcional)</label>
+                                <input id="cmd-desc" placeholder="O que esse comando faz" />
+
+                                <div class="cmd-form-footer">
+                                    <label class="cmd-toggle">
+                                        <input type="checkbox" id="cmd-enabled" checked style="width:auto;" />
+                                        <span>Ativo</span>
+                                    </label>
+                                    <label class="cmd-toggle">
+                                        <input type="checkbox" id="cmd-override-reserved" style="width:auto;" />
+                                        <span>Substituir comando do sistema (reservado)</span>
+                                    </label>
+                                    <div class="spacer"></div>
+                                    <button class="btn-mini" type="button" onclick="deleteCommand()"><i class="fas fa-trash"></i> Apagar</button>
+                                    <button class="btn-mini" type="submit"><i class="fas fa-save"></i> Salvar</button>
+                                </div>
+
+                                <label>Restrição de grupos (opcional)</label>
+                                <div id="cmd-allowed-groups" class="group-checklist" data-role="cmd"></div>
+
+                                <div style="display:flex; justify-content:space-between; align-items:center; gap: 10px;">
+                                    <label style="margin: 15px 0 8px;">Variáveis (clique para inserir)</label>
+                                    <button class="btn-mini" type="button" onclick="loadVariables(true)"><i class="fas fa-sync"></i> Recarregar</button>
+                                </div>
+                                <div class="chips" id="var-chips"></div>
+
+                                <div class="actions">
+                                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                                        <h3 style="margin: 10px 0; color: white;">Ações</h3>
+                                        <div class="actions-toolbar">
+                                            <button class="btn-mini" type="button" onclick="addAction('sendText')">+ Texto</button>
+                                            <button class="btn-mini" type="button" onclick="addAction('sendReaction')">+ Reação</button>
+                                            <button class="btn-mini" type="button" onclick="addAction('delay')">+ Delay</button>
+                                            <button class="btn-mini" type="button" onclick="addAction('sendImageUrl')">+ Imagem</button>
+                                            <button class="btn-mini" type="button" onclick="addAction('sendStickerUrl')">+ Sticker</button>
+                                            <button class="btn-mini" type="button" onclick="addAction('setVar')">+ Variável</button>
+                                            <button class="btn-mini" type="button" onclick="addAction('httpRequest')">+ Webhook</button>
+                                            <button class="btn-mini" type="button" onclick="addAction('validate')">+ Validar</button>
+                                            <button class="btn-mini" type="button" onclick="addAction('if')">+ Se/Então</button>
+                                        </div>
+                                    </div>
+                                    <div id="actions-container"></div>
+                                </div>
+
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 10px;">
+                                    <h3 style="margin: 10px 0; color: white;">Preview</h3>
+                                    <button class="btn-mini" type="button" onclick="renderPreview()"><i class="fas fa-eye"></i> Gerar</button>
+                                </div>
+                                <div class="preview-box" id="cmd-preview">(preview aqui)</div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2><i class="fas fa-wave-square"></i> Execuções (Outputs)</h2>
+                    <div class="logs-mini" id="cmd-logs">Nenhuma execução ainda.</div>
                 </div>
             </div>
 
@@ -398,29 +728,84 @@
     </div>
 
 <script>
-    const socket = io();
+    let ADMIN_TOKEN = localStorage.getItem('adminToken') || '';
+    const socket = io({ auth: { token: ADMIN_TOKEN }, autoConnect: Boolean(ADMIN_TOKEN) });
+
+    function showLoginOverlay(reasonText = '') {
+        ADMIN_TOKEN = '';
+        try { localStorage.removeItem('adminLoggedIn'); } catch (e) {}
+        try { localStorage.removeItem('adminToken'); } catch (e) {}
+
+        const overlay = document.getElementById('login-overlay');
+        const app = document.getElementById('main-app');
+        if (overlay) overlay.style.display = 'flex';
+        if (app) app.style.display = 'none';
+
+        try { socket.disconnect(); } catch (e) {}
+
+        if (reasonText) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Sessão expirada',
+                text: reasonText,
+                background: '#000000',
+                color: '#FAB464',
+                confirmButtonColor: '#F0B450'
+            });
+        }
+    }
+
+    async function apiFetch(url, options = {}) {
+        options.headers = options.headers || {};
+        if (ADMIN_TOKEN) options.headers['x-admin-token'] = ADMIN_TOKEN;
+        const res = await fetch(url, options);
+        if (res.status === 401 && !String(url || '').includes('/api/admin/login')) {
+            showLoginOverlay('Faça login novamente para continuar.');
+        }
+        return res;
+    }
 
     // AUTH
-    window.onload = () => { if(localStorage.getItem('adminLoggedIn')) showMainApp(); }
+    window.onload = () => {
+        if (localStorage.getItem('adminLoggedIn') && localStorage.getItem('adminToken')) showMainApp();
+    }
     
     async function doLogin() {
         const pass = document.getElementById('admin-pass').value;
         const res = await fetch('/api/admin/login', {
             method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pass})
         });
-        if((await res.json()).success) {
+        const json = await res.json();
+        if(json.success) {
             localStorage.setItem('adminLoggedIn', 'true');
+            if (json.token) {
+                ADMIN_TOKEN = json.token;
+                localStorage.setItem('adminToken', json.token);
+            }
+
+            // Reautentica sockets com o token novo
+            try {
+                socket.auth = { token: ADMIN_TOKEN };
+                socket.connect();
+            } catch (e) {}
+
             showMainApp();
         } else {
             Swal.fire({icon:'error', title:'Acesso Negado', text:'Senha incorreta', background:'#1c1c1f', color:'#fff'});
         }
     }
 
-    function doLogout() { localStorage.removeItem('adminLoggedIn'); location.reload(); }
+    function doLogout() { localStorage.removeItem('adminLoggedIn'); localStorage.removeItem('adminToken'); location.reload(); }
     
     function showMainApp() {
         document.getElementById('login-overlay').style.display='none';
         document.getElementById('main-app').style.display='grid';
+        try {
+            if (ADMIN_TOKEN) {
+                socket.auth = { token: ADMIN_TOKEN };
+                socket.connect();
+            }
+        } catch (e) {}
         loadAIConfig();
     }
 
@@ -431,6 +816,7 @@
         document.getElementById(id).classList.add('active');
         btn.classList.add('active');
         if(id === 'list') loadCampaigns();
+        // painel commands removido (use !autorepo)
     }
 
     function updateStatus(s, online) {
@@ -448,16 +834,21 @@
             conn.style.display='block';
         } else {
             dot.className = 'led off';
+            conn.style.display='none';
+            // padrão offline: esconde QR e mostra mensagem
+            qr.style.display='none';
+            msg.style.display='block';
+            msg.innerText = s || 'Offline';
+
             if(s.includes('Leitura') || s.includes('QR')) {
-                conn.style.display='none';
                 qr.style.display='inline-block';
-                msg.style.display='block';
                 msg.innerText='Escaneie o QR Code';
             }
         }
     }
 
     // SOCKETS
+    socket.on('connect', () => updateStatus('Conectando...', false));
     socket.on('disconnect', () => updateStatus('Offline', false));
     socket.on('status', s => updateStatus(s, s.includes('Online')));
     
@@ -472,10 +863,50 @@
         }
     });
 
+    let currentAIAllowed = [];
+    let GROUP_LIST = [];
+
+    function getSelectedGroupIds(containerId) {
+        const box = document.getElementById(containerId);
+        if (!box) return [];
+        return Array.from(box.querySelectorAll('input[type="checkbox"]:checked'))
+            .map(i => i.value);
+    }
+
+    function renderGroupChecklist(containerId, selected = []) {
+        const box = document.getElementById(containerId);
+        if (!box) return;
+        const html = GROUP_LIST.map(g => {
+            const checked = selected.includes(g.id) ? 'checked' : '';
+            return `
+                <label class="group-check">
+                    <input type="checkbox" value="${g.id}" ${checked} />
+                    <span>${g.subject}</span>
+                </label>
+            `;
+        }).join('');
+        box.innerHTML = html || '<div class="group-empty">Nenhum grupo encontrado.</div>';
+    }
+
+    function updateAISelectionUI() {
+        renderGroupChecklist('ai-groups', currentAIAllowed);
+        const countEl = document.getElementById('total-active-ai');
+        if (countEl) countEl.innerText = currentAIAllowed.length;
+    }
+
     socket.on('groups', list => {
-        const html = list.map(g => `<option value="${g.id}">${g.subject}</option>`).join('');
-        document.querySelectorAll('.group-select').forEach(s => s.innerHTML = html);
-        document.getElementById('total-groups').innerText = list.length;
+        GROUP_LIST = Array.isArray(list) ? list : [];
+        const html = GROUP_LIST.map(g => `<option value="${g.id}">${g.subject}</option>`).join('');
+        const tokenSel = document.getElementById('group-select-token');
+        if (tokenSel) tokenSel.innerHTML = html;
+        renderGroupChecklist('ai-groups', currentAIAllowed);
+        renderGroupChecklist('campaign-groups', []);
+        renderGroupChecklist('cmd-allowed-groups', []);
+        const totalEl = document.getElementById('total-groups');
+        if (totalEl) totalEl.innerText = list.length;
+
+        // Re-aplica a whitelist se a config já chegou
+        updateAISelectionUI();
     });
 
     socket.on('log', msg => {
@@ -485,10 +916,116 @@
         document.getElementById('logs-container').prepend(div);
     });
 
+    function showZackTutorial() {
+        const zackImg = 'https://cdn-icons-png.freepik.com/512/7717/7717267.png';
+        const base = {
+            background: '#000000',
+            color: '#FAB464',
+            confirmButtonColor: '#F0B450',
+            showClass: { popup: 'swal2-show' },
+            hideClass: { popup: 'swal2-hide' }
+        };
+
+        const steps = [
+            {
+                title: 'Zack: bem-vindo ao Command Builder',
+                html: `
+                    <div style="display:flex; gap:12px; align-items:flex-start; text-align:left;">
+                        <img src="${zackImg}" alt="Zack" style="width:72px; height:72px; border-radius:16px; background:rgba(100,60,160,0.18); border:1px solid rgba(100,100,180,0.28); padding:8px;" />
+                        <div>
+                            <div style="font-weight:700; margin-bottom:6px;">Eu sou o Zack.</div>
+                            <div style="color:rgba(250,180,100,0.78); line-height:1.35;">
+                                Vou te guiar pra criar comandos sem programar. No final, é só testar no WhatsApp com o <b>trigger</b>.
+                            </div>
+                        </div>
+                    </div>
+                `,
+            },
+            {
+                title: '1) Trigger + Nome + Categoria',
+                html: `
+                    <div style="text-align:left; color:rgba(250,180,100,0.78); line-height:1.4;">
+                        <b>Trigger</b> é o que você digita no WhatsApp (ex: <code style="color:#F0B450">!bomdia</code>).<br/>
+                        <b>Nome</b> é opcional (só organização).<br/>
+                        <b>Categoria</b> ajuda a agrupar no menu.
+                    </div>
+                `
+            },
+            {
+                title: '2) Patente mínima + Restrição de grupos',
+                html: `
+                    <div style="text-align:left; color:rgba(250,180,100,0.78); line-height:1.4;">
+                        Use <b>Patente mínima</b> pra decidir quem pode usar o comando.<br/>
+                        Use <b>Restrição de grupos</b> se o comando deve funcionar só em grupos específicos.
+                    </div>
+                `
+            },
+            {
+                title: '3) Ações = o que o comando faz',
+                html: `
+                    <div style="text-align:left; color:rgba(250,180,100,0.78); line-height:1.4;">
+                        Um comando roda uma lista de <b>ações</b> em sequência.<br/>
+                        Ex.: <b>Enviar Texto</b>, depois <b>Delay</b>, depois <b>Enviar Imagem</b>.
+                    </div>
+                `
+            },
+            {
+                title: '4) Variáveis (chips) {{...}}',
+                html: `
+                    <div style="text-align:left; color:rgba(250,180,100,0.78); line-height:1.4;">
+                        Clique primeiro no campo de texto de alguma ação (Texto/URL/Legenda), depois clique num chip.<br/>
+                        Ex.: <code style="color:#F0B450">Olá {{sender.name}}!</code>
+                    </div>
+                `
+            },
+            {
+                title: '5) Validar + Se/Então (regras)',
+                html: `
+                    <div style="text-align:left; color:rgba(250,180,100,0.78); line-height:1.4;">
+                        <b>Validar (Stop)</b>: bloqueia o comando se faltar argumento (ex.: exigir <code style="color:#F0B450">!comando algo</code>).<br/>
+                        <b>Se/Então</b>: condição para responder diferente (ex.: só Master).
+                    </div>
+                `
+            },
+            {
+                title: '6) Teste e Salve',
+                html: `
+                    <div style="text-align:left; color:rgba(250,180,100,0.78); line-height:1.4;">
+                        Clique em <b>Gerar</b> pra ver o Preview.<br/>
+                        Clique em <b>Salvar</b> e teste no WhatsApp usando o trigger.<br/>
+                        As execuções aparecem em <b>Execuções (Outputs)</b>.
+                    </div>
+                `
+            }
+        ];
+
+        const Wizard = Swal.mixin({
+            ...base,
+            showCancelButton: true,
+            confirmButtonText: 'Próximo',
+            cancelButtonText: 'Fechar',
+            progressSteps: steps.map((_, i) => String(i + 1)),
+            width: 720
+        });
+
+        (async () => {
+            for (let i = 0; i < steps.length; i++) {
+                const res = await Wizard.fire({
+                    ...steps[i],
+                    currentProgressStep: i,
+                    showDenyButton: i > 0,
+                    denyButtonText: 'Voltar'
+                });
+                if (res.isDismissed || res.isCancelled) break;
+                if (res.isDenied) i = Math.max(-1, i - 2);
+            }
+        })();
+    }
+
     // FUNCTIONS
     async function generateToken() {
         const sel = document.getElementById('group-select-token');
-        const res = await fetch('/api/admin/generate-token', {
+        const res = await apiFetch('/api/admin/generate-token', {
             method:'POST', headers:{'Content-Type':'application/json'},
             body:JSON.stringify({groupJid:sel.value, groupName:sel.options[sel.selectedIndex].text})
         });
@@ -501,34 +1038,42 @@
     }
 
     async function loadAIConfig() {
-        const res = await fetch('/api/ai-config');
+        const res = await apiFetch('/api/ai-config');
         const data = await res.json();
-        if(data.systemInstruction) {
-            document.getElementById('ai-context').value = data.systemInstruction;
-            const sel = document.getElementById('ai-groups');
-            setTimeout(() => {
-                Array.from(sel.options).forEach(o => o.selected = data.allowedGroups?.includes(o.value));
-                document.getElementById('total-active-ai').innerText = data.allowedGroups?.length || 0;
-            }, 1000);
-        }
+        document.getElementById('ai-context').value = (data && typeof data.systemInstruction === 'string') ? data.systemInstruction : '';
+        
+        // Salva no estado global e tenta atualizar UI (caso os grupos já tenham chegado)
+        currentAIAllowed = Array.isArray(data?.allowedGroups) ? data.allowedGroups : [];
+        updateAISelectionUI();
     }
 
     document.getElementById('form-ai').onsubmit = async (e) => {
         e.preventDefault();
         const ctx = document.getElementById('ai-context').value;
-        const groups = Array.from(document.getElementById('ai-groups').selectedOptions).map(o=>o.value);
-        await fetch('/api/ai-config', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({systemInstruction:ctx, allowedGroups:groups}) });
-        Swal.fire({icon:'success', title:'Salvo', background:'#1c1c1f', color:'#fff', confirmButtonColor:'var(--primary)'});
+        const groups = getSelectedGroupIds('ai-groups');
+        const res = await apiFetch('/api/ai-config', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({systemInstruction:ctx, allowedGroups:groups}) });
+
+        let json = null;
+        try { json = await res.json(); } catch (e) {}
+
+        if (!res.ok || json?.success === false) {
+            const msg = json?.message || json?.error || `Falha ao salvar (HTTP ${res.status})`;
+            Swal.fire({icon:'error', title:'Não salvou', text: msg, background:'#000000', color:'#FAB464', confirmButtonColor:'#F0B450'});
+            return;
+        }
+
+        document.getElementById('total-active-ai').innerText = groups.length;
+        Swal.fire({icon:'success', title:'Salvo', background:'#000000', color:'#FAB464', confirmButtonColor:'#F0B450'});
     };
 
     document.getElementById('form-campaign').onsubmit = async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
-        const groups = Array.from(e.target.querySelector('select').selectedOptions).map(o=>o.value);
+        const groups = getSelectedGroupIds('campaign-groups');
         formData.delete('targetGroups');
         formData.append('targetGroups', JSON.stringify(groups));
         
-        const res = await fetch('/api/campaign', { method:'POST', body:formData });
+        const res = await apiFetch('/api/campaign', { method:'POST', body:formData });
         if((await res.json()).success) {
             Swal.fire({icon:'success', title:'Campanha Criada', background:'#1c1c1f', color:'#fff'});
             e.target.reset();
@@ -536,7 +1081,7 @@
     };
 
     async function loadCampaigns() {
-        const res = await fetch('/api/campaigns');
+        const res = await apiFetch('/api/campaigns');
         const data = await res.json();
         document.getElementById('campaign-list-container').innerHTML = data.map(c => `
             <div class="campaign-item">
@@ -545,6 +1090,1075 @@
             </div>
         `).join('');
     }
+
+    // ==========================================================
+    // 🧩 COMMAND BUILDER (NO-CODE)
+    // ==========================================================
+    let COMMANDS = [];
+    let ACTIVE_CMD_ID = null;
+    let VARS = [];
+    let lastFocusedEl = null;
+
+    document.addEventListener('focusin', (e) => {
+        const el = e.target;
+        if (!el) return;
+        // Variáveis devem entrar apenas em campos das AÇÕES (não em categoria/nome/trigger)
+        if (!el.closest('#actions-container')) return;
+        if (!el.hasAttribute('data-action-field')) return;
+        if (el.tagName === 'TEXTAREA') {
+            lastFocusedEl = el;
+            return;
+        }
+        if (el.tagName === 'INPUT' && el.type !== 'checkbox' && el.type !== 'number') {
+            lastFocusedEl = el;
+            return;
+        }
+    });
+
+    function insertAtCursor(el, text) {
+        if (!el) return;
+        const start = el.selectionStart ?? el.value.length;
+        const end = el.selectionEnd ?? el.value.length;
+        const before = el.value.slice(0, start);
+        const after = el.value.slice(end);
+        el.value = before + text + after;
+        const pos = start + text.length;
+        el.focus();
+        el.selectionStart = el.selectionEnd = pos;
+    }
+
+    async function initCommandsPanel() {
+        await loadVariables();
+        await loadCommands();
+        renderCommandList();
+        if (ACTIVE_CMD_ID) await loadLogs();
+    }
+
+    const DEFAULT_VARS = [
+        { key: 'sender.name', label: 'Nome do usuário', emoji: '👤', example: 'Isaac' },
+        { key: 'sender.rank', label: 'Patente', emoji: '🎖️', example: 'Master' },
+        { key: 'sender.phone', label: 'Telefone', emoji: '📞', example: '5582...' },
+        { key: 'group.name', label: 'Nome do grupo', emoji: '👥', example: 'Oráculo' },
+        { key: 'group.jid', label: 'ID do grupo', emoji: '🆔', example: '1203...@g.us' },
+        { key: 'argText', label: 'Texto após o comando', emoji: '📝', example: 'qualquer coisa' },
+        { key: 'args.0', label: 'Argumento 1', emoji: '1️⃣', example: 'foo' },
+        { key: 'args.1', label: 'Argumento 2', emoji: '2️⃣', example: 'bar' },
+        { key: 'vars.http.ok', label: 'Webhook OK (true/false)', emoji: '✅', example: 'true' },
+        { key: 'vars.http.status', label: 'Status do Webhook', emoji: '🌐', example: '200' },
+        { key: 'vars.http.text', label: 'Texto do Webhook', emoji: '📦', example: 'ok' },
+        { key: 'vars.http.json', label: 'JSON do Webhook (se parseado)', emoji: '🧠', example: '{"ok":true}' }
+    ];
+
+    function onVarInfoClick(ev, key) {
+        try { ev?.stopPropagation?.(); } catch (e) {}
+        showVarHelp(key);
+        return false;
+    }
+
+    function renderVarChips(list, noticeHtml = '') {
+        const chips = document.getElementById('var-chips');
+        if (!chips) return;
+        const safeAttr = (s) => String(s || '')
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        const safeJs = (s) => String(s || '').replace(/'/g, "\\'");
+
+        const notice = noticeHtml ? `<div style="margin-bottom:8px;">${noticeHtml}</div>` : '';
+        chips.innerHTML = notice + (list || []).map(v => {
+            const key = String(v.key || '');
+            const emoji = v.emoji || '✨';
+            return `
+                <div class="chip" onclick="onVarChip('${safeJs(key)}')" title="Inserir {{${safeAttr(key)}}}">
+                    <span class="chip-label">${emoji} {{${safeAttr(key)}}}</span>
+                    <button class="chip-info" type="button" onclick="return onVarInfoClick(event,'${safeJs(key)}')" title="O que é isso?">
+                        <i class="fas fa-circle-info"></i>
+                    </button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function loadVariables(showToast = false) {
+        const chips = document.getElementById('var-chips');
+        if (!chips) return;
+
+        try {
+            const res = await apiFetch('/api/dynamic-commands/variables');
+
+            if (res.status === 401) {
+                VARS = DEFAULT_VARS;
+                renderVarChips(
+                    VARS,
+                    `<div style="color: rgba(250,180,100,0.74); padding: 8px 6px;">Sessão expirada. Faça login novamente para carregar as variáveis completas.</div>`
+                );
+                if (showToast) {
+                    Swal.fire({ icon:'warning', title:'Sessão expirada', text:'Faça login novamente.', background:'#000000', color:'#FAB464', confirmButtonColor:'#F0B450' });
+                }
+                return;
+            }
+
+            const json = await res.json();
+            if (json.success) VARS = json.vars || [];
+            if (!Array.isArray(VARS) || VARS.length === 0) VARS = DEFAULT_VARS;
+
+            renderVarChips(VARS);
+            if (showToast) {
+                Swal.fire({ icon:'success', title:'Variáveis atualizadas', background:'#000000', color:'#FAB464', confirmButtonColor:'#F0B450', timer: 1200, showConfirmButton: false });
+            }
+        } catch (e) {
+            VARS = DEFAULT_VARS;
+            renderVarChips(
+                VARS,
+                `<div style="color: rgba(250,180,100,0.74); padding: 8px 6px;">Não consegui carregar do servidor. Usando variáveis padrão.</div>`
+            );
+            if (showToast) {
+                Swal.fire({ icon:'info', title:'Usando variáveis padrão', text:String(e?.message || e), background:'#000000', color:'#FAB464', confirmButtonColor:'#F0B450' });
+            }
+        }
+    }
+
+    function onVarChip(key) {
+        if (!lastFocusedEl) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Selecione um campo primeiro',
+                text: 'Clique em um campo de texto de alguma ação (ex.: Texto/URL/Legenda) e depois clique na variável.',
+                background: '#000000',
+                color: '#FAB464',
+                confirmButtonColor: '#F0B450'
+            });
+            return;
+        }
+        insertAtCursor(lastFocusedEl, `{{${key}}}`);
+    }
+
+    const VAR_HELP = {
+        'sender.name': {
+            what: 'Nome exibido (ou nome salvo) do usuário que enviou a mensagem.',
+            where: ['Enviar Texto', 'Legenda', 'Webhook (URL/body)', 'Validar/Se-Então (comparação com texto)'],
+            examples: [
+                { template: 'Olá {{sender.name}}! Seja bem-vindo.', output: 'Olá Isaac! Seja bem-vindo.' },
+                { template: 'https://api.site.com/u?name={{sender.name}}', output: 'https://api.site.com/u?name=Isaac' }
+            ],
+            tips: [
+                'Se o usuário não tiver nome, pode vir vazio dependendo do WhatsApp.',
+                'Use junto com {{sender.rank}} para mensagens personalizadas por patente.'
+            ]
+        },
+        'sender.rank': {
+            what: 'Patente/cargo do usuário no seu sistema (ex.: Membro, Master, Coord, Dev).',
+            where: ['Enviar Texto', 'Se/Então (regras de acesso)', 'Validar'],
+            examples: [
+                { template: 'Sua patente é {{sender.rank}}.', output: 'Sua patente é Master.' },
+                { template: 'Se {{sender.rank}} == Master → então libera.', output: 'Master' }
+            ],
+            tips: [
+                'Para bloquear por acesso: use a ação “Se / Então” com left={{sender.rank}} op== right=Master.',
+                'Em comparações, prefira ativar “case insensitive” quando tiver.'
+            ]
+        },
+        'sender.phone': {
+            what: 'Telefone/identificador do remetente (quando disponível).',
+            where: ['Enviar Texto', 'Webhook (parâmetro)', 'SetVar (salvar)'],
+            examples: [
+                { template: 'Seu número: {{sender.phone}}', output: 'Seu número: 5582…' }
+            ],
+            tips: [
+                'Pode variar dependendo do tipo de JID/privacidade do WhatsApp.',
+                'Se você for usar em URL, encode no backend (aqui é literal).'
+            ]
+        },
+        'group.name': {
+            what: 'Nome (subject) do grupo onde o comando foi executado.',
+            where: ['Enviar Texto', 'Webhook', 'Imagem/Sticker (legenda/caption)'],
+            examples: [
+                { template: 'Bem-vindo ao grupo {{group.name}}!', output: 'Bem-vindo ao grupo Oráculo!' }
+            ],
+            tips: ['Em PV (mensagem direta), pode estar vazio/indisponível.']
+        },
+        'group.jid': {
+            what: 'ID interno do grupo (jid). Útil para logs, webhooks e regras por grupo.',
+            where: ['Webhook', 'Enviar Texto (debug)', 'SetVar'],
+            examples: [
+                { template: 'Grupo ID: {{group.jid}}', output: 'Grupo ID: 1203…@g.us' }
+            ],
+            tips: ['Use junto com “Restrição de grupos” quando quiser limitar comandos.']
+        },
+        'argText': {
+            what: 'Tudo o que o usuário digitou depois do trigger, como texto único.',
+            where: ['Enviar Texto', 'Validar (exists)', 'Webhook (body)', 'SetVar'],
+            examples: [
+                { template: 'Usuário digitou: {{argText}}', output: 'Usuário digitou: pizza grande' },
+                { template: 'Use: !anunciar {{argText}}', output: 'Use: !anunciar promoção' }
+            ],
+            tips: [
+                'Ótimo para comandos “!say <texto>” e “!anunciar <mensagem>”.',
+                'Se o usuário não passar nada, pode ficar vazio — use “Validar (Stop)” para exigir.'
+            ]
+        },
+        'args.0': {
+            what: 'Primeiro argumento após o trigger (separado por espaços).',
+            where: ['Enviar Texto', 'Validar', 'Se/Então', 'Webhook'],
+            examples: [
+                { template: 'Comando: !setcargo Master', output: 'args.0 = Master' },
+                { template: 'Olá {{args.0}}', output: 'Olá Master' }
+            ],
+            tips: [
+                'Exemplo: se o usuário digita “!cmd a b c”, então args.0=a, args.1=b.',
+                'Se houver aspas/formatos complexos, ainda é split simples por espaço.'
+            ]
+        },
+        'args.1': {
+            what: 'Segundo argumento após o trigger (separado por espaços).',
+            where: ['Enviar Texto', 'Validar', 'Se/Então', 'Webhook'],
+            examples: [
+                { template: 'Comando: !ban 5582 motivo', output: 'args.1 = motivo' }
+            ],
+            tips: ['Se faltar argumento, fica vazio — use “Validar (Stop)”.']
+        },
+        'vars.http.ok': {
+            what: 'Resultado booleano do último Webhook (HTTP). true se HTTP status “ok”.',
+            where: ['Se/Então', 'Enviar Texto', 'Validar'],
+            examples: [
+                { template: 'Webhook ok? {{vars.http.ok}}', output: 'Webhook ok? true' },
+                { template: 'Se {{vars.http.ok}} == true → então sucesso', output: 'true/false' }
+            ],
+            tips: [
+                'Só existe depois de rodar uma ação “Webhook (HTTP)”.',
+                'Se você usar storeAs diferente no webhook (ex.: storeAs=meu), a variável vira vars.meu.ok.'
+            ]
+        },
+        'vars.http.status': {
+            what: 'HTTP status code do último Webhook (ex.: 200, 404, 500).',
+            where: ['Enviar Texto', 'Se/Então', 'Validar'],
+            examples: [
+                { template: 'Status: {{vars.http.status}}', output: 'Status: 200' },
+                { template: 'Se {{vars.http.status}} == 200 → ok', output: '200' }
+            ],
+            tips: [
+                'Só existe depois de Webhook (HTTP).',
+                'Com storeAs custom, vira vars.<storeAs>.status.'
+            ]
+        },
+        'vars.http.text': {
+            what: 'Corpo em texto retornado pelo último Webhook (HTTP).',
+            where: ['Enviar Texto', 'SetVar', 'Validar'],
+            examples: [
+                { template: 'Resposta: {{vars.http.text}}', output: 'Resposta: ok' }
+            ],
+            tips: [
+                'Se a resposta for grande, pode ficar enorme — prefira parseJson e ler campos específicos via vars.http.json.',
+                'Com storeAs custom, vira vars.<storeAs>.text.'
+            ]
+        },
+        'vars.http.json': {
+            what: 'Resposta do Webhook parseada como JSON (quando parseJson=true).',
+            where: ['Enviar Texto (debug)', 'SetVar (guardar)', 'Se/Então'],
+            examples: [
+                { template: 'JSON: {{vars.http.json}}', output: '{"ok":true}' }
+            ],
+            tips: [
+                'Se parseJson estiver desligado ou a resposta não for JSON, pode ficar vazio/erro.',
+                'Com storeAs custom, vira vars.<storeAs>.json.'
+            ]
+        }
+    };
+
+    function escapeHtml(s) {
+        return String(s ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function showVarHelp(key) {
+        const all = Array.isArray(VARS) && VARS.length ? VARS : DEFAULT_VARS;
+        const meta = (all || []).find(v => String(v.key) === String(key)) || { key };
+        const emoji = meta.emoji ? String(meta.emoji) : '✨';
+        const label = meta.label ? String(meta.label) : (VAR_HELP[key]?.title || String(key || 'Variável'));
+        const usage = `{{${key}}}`;
+
+        const getDynamicVarHelp = (k) => {
+            const s = String(k || '');
+
+            const mArgs = s.match(/^args\.(\d+)$/);
+            if (mArgs) {
+                const idx = Number(mArgs[1]);
+                const human = Number.isFinite(idx) ? (idx + 1) : (mArgs[1]);
+                return {
+                    what: `Argumento #${human} após o trigger (separado por espaços).`,
+                    where: ['Enviar Texto', 'Validar', 'Se/Então', 'Webhook'],
+                    examples: [
+                        { template: `Usuário digitou: !cmd a b c`, output: `args.${idx} = ${idx === 0 ? 'a' : idx === 1 ? 'b' : 'c'}` }
+                    ],
+                    tips: [
+                        'Split é simples por espaço; não entende aspas como agrupamento.',
+                        'Se o usuário não passar esse argumento, fica vazio — use “Validar (Stop)”.'
+                    ]
+                };
+            }
+
+            const mVars = s.match(/^vars\.([a-zA-Z0-9_\-]+)\.(ok|status|text|json)$/);
+            if (mVars) {
+                const storeAs = mVars[1];
+                const field = mVars[2];
+                const fieldLabel = field === 'ok' ? 'OK (true/false)'
+                    : field === 'status' ? 'HTTP Status'
+                    : field === 'text' ? 'Resposta (texto)'
+                    : 'Resposta (JSON)';
+
+                const baseTips = [
+                    'Essas variáveis só existem depois de rodar uma ação “Webhook (HTTP)”.',
+                    'O nome no meio (storeAs) vem do campo “Guardar como (storeAs)” do Webhook.'
+                ];
+                if (field === 'json') baseTips.push('Funciona melhor com “parseJson=true”. Se a resposta não for JSON, pode ficar vazio/indisponível.');
+                if (field === 'text') baseTips.push('Se a resposta vier gigante, pode estourar sua mensagem — prefira JSON + campos específicos quando possível.');
+
+                return {
+                    what: `${fieldLabel} do Webhook salvo como “${storeAs}”.`,
+                    where: ['Se/Então', 'Validar', 'Enviar Texto', 'SetVar'],
+                    examples: [
+                        { template: `Webhook storeAs=${storeAs} → depois: ${usage}`, output: field === 'ok' ? 'true' : field === 'status' ? '200' : field === 'text' ? 'ok' : '{"ok":true}' }
+                    ],
+                    tips: baseTips
+                };
+            }
+
+            return null;
+        };
+
+        const help = VAR_HELP[key] || getDynamicVarHelp(key) || {};
+        const what = help.what || 'Variável de template que será substituída automaticamente na execução.';
+        const where = Array.isArray(help.where) ? help.where : [];
+        const tips = Array.isArray(help.tips) ? help.tips : [];
+        const examples = Array.isArray(help.examples) ? help.examples : [];
+
+        const whereHtml = where.length
+            ? `<div style="margin-top:10px;">
+                    <div style="font-weight:700; color:#F0B450; margin-bottom:6px;">Onde usar</div>
+                    <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                        ${where.map(w => `<span style="padding:6px 10px; border-radius:999px; border:1px solid rgba(100,100,180,0.28); background: rgba(100,60,160,0.14);">${escapeHtml(w)}</span>`).join('')}
+                    </div>
+               </div>`
+            : '';
+
+        const examplesHtml = examples.length
+            ? `<div style="margin-top:12px;">
+                    <div style="font-weight:700; color:#F0B450; margin-bottom:6px;">Exemplos</div>
+                    ${examples.map(ex => `
+                        <div style="border:1px solid rgba(100,100,180,0.28); background: rgba(0,0,0,0.32); border-radius:14px; padding:10px 12px; margin-bottom:10px;">
+                            <div style="font-size:0.9rem; color:rgba(250,180,100,0.78); margin-bottom:6px;">Template</div>
+                            <div style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace; color:#FAB464;">${escapeHtml(ex.template || '')}</div>
+                            ${ex.output ? `
+                                <div style="height:8px"></div>
+                                <div style="font-size:0.9rem; color:rgba(250,180,100,0.78); margin-bottom:6px;">Resultado (exemplo)</div>
+                                <div style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace; color:#6478C8;">${escapeHtml(ex.output)}</div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+               </div>`
+            : '';
+
+        const tipsHtml = tips.length
+            ? `<div style="margin-top:12px;">
+                    <div style="font-weight:700; color:#F0B450; margin-bottom:6px;">Dicas & pegadinhas</div>
+                    <ul style="margin:0; padding-left:18px; color:rgba(250,180,100,0.78); line-height:1.45;">
+                        ${tips.map(t => `<li style="margin:6px 0;">${escapeHtml(t)}</li>`).join('')}
+                    </ul>
+               </div>`
+            : '';
+
+        Swal.fire({
+            title: `${emoji} ${escapeHtml(usage)}`,
+            html: `
+                <div style="text-align:left; color:rgba(250,180,100,0.78); line-height:1.45;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+                        <div>
+                            <div style="font-weight:800; color:#F0B450; margin-bottom:6px;">${escapeHtml(label)}</div>
+                            <div>${escapeHtml(what)}</div>
+                        </div>
+                        <button id="copy-var" type="button" style="white-space:nowrap; padding:10px 12px; border-radius:12px; border:1px solid rgba(100,100,180,0.28); background: rgba(100,60,160,0.16); color:#FAB464; cursor:pointer;">
+                            <i class="fas fa-copy"></i> Copiar
+                        </button>
+                    </div>
+
+                    <div style="margin-top:10px;">
+                        <div style="font-weight:700; color:#F0B450; margin-bottom:6px;">Como usar</div>
+                        <div style="border:1px solid rgba(100,100,180,0.28); background: rgba(0,0,0,0.32); border-radius:14px; padding:10px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace; color:#FAB464;">${escapeHtml(usage)}</div>
+                    </div>
+
+                    ${whereHtml}
+                    ${examplesHtml}
+                    ${tipsHtml}
+                </div>
+            `,
+            background: '#000000',
+            color: '#FAB464',
+            confirmButtonColor: '#F0B450',
+            confirmButtonText: 'Fechar',
+            didOpen: () => {
+                const btn = document.getElementById('copy-var');
+                if (!btn) return;
+                btn.addEventListener('click', async () => {
+                    try {
+                        await navigator.clipboard.writeText(usage);
+                        btn.innerHTML = '<i class="fas fa-check"></i> Copiado';
+                        setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i> Copiar'; }, 900);
+                    } catch (e) {
+                        // fallback: sem clipboard
+                        Swal.fire({ icon:'info', title:'Copie manualmente', text: usage, background:'#000000', color:'#FAB464', confirmButtonColor:'#F0B450' });
+                    }
+                });
+            }
+        });
+    }
+
+    async function loadCommands() {
+        const res = await apiFetch('/api/dynamic-commands');
+        const json = await res.json();
+        COMMANDS = json.list || [];
+        renderCategoryPresets();
+    }
+
+    function renderCategoryPresets() {
+        const dl = document.getElementById('cmd-category-presets');
+        if (!dl) return;
+
+        const presets = [
+            '🧩 DINÂMICO',
+            '⚙️ ADMIN',
+            '🛡️ MODERAÇÃO',
+            '🧰 UTIL',
+            'ℹ️ INFO',
+            '🎭 DIVERSÃO',
+            '🎮 JOGOS'
+        ];
+        const fromCommands = (COMMANDS || [])
+            .map(c => (c.category || '').toString().trim())
+            .filter(Boolean);
+        const uniq = Array.from(new Set([...presets, ...fromCommands])).slice(0, 80);
+
+        const escapeAttr = (s) => s
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        dl.innerHTML = uniq.map(c => `<option value="${escapeAttr(c)}"></option>`).join('');
+    }
+
+    async function pickCategory() {
+        // garante que temos comandos carregados
+        if (!Array.isArray(COMMANDS) || COMMANDS.length === 0) {
+            try { await loadCommands(); } catch (e) { }
+        }
+        const presets = [
+            '🧩 DINÂMICO',
+            '⚙️ ADMIN',
+            '🛡️ MODERAÇÃO',
+            '🧰 UTIL',
+            'ℹ️ INFO',
+            '🎭 DIVERSÃO',
+            '🎮 JOGOS'
+        ];
+        const fromCommands = (COMMANDS || [])
+            .map(c => (c.category || '').toString().trim())
+            .filter(Boolean);
+        const categories = Array.from(new Set([...presets, ...fromCommands])).slice(0, 120);
+
+        const current = (document.getElementById('cmd-category')?.value || '').trim();
+        const listHtml = categories.map(c => {
+            const active = c === current ? 'border:1px solid rgba(240,180,80,0.55); box-shadow: 0 0 0 2px rgba(240,180,80,0.12);' : 'border:1px solid rgba(100,100,180,0.28);';
+            const safe = c.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return `<button type="button" data-cat="${safe}" style="text-align:left; width:100%; padding:10px 12px; border-radius:12px; background: rgba(0,0,0,0.35); ${active} color:#FAB464; cursor:pointer;">${safe}</button>`;
+        }).join('');
+
+        const res = await Swal.fire({
+            title: 'Selecione a categoria',
+            html: `
+                <div style="display:grid; gap:10px; text-align:left;">
+                    <div style="color: rgba(250,180,100,0.78);">Dica: você também pode digitar manualmente.</div>
+                    <div id="cat-pick" style="display:grid; gap:8px; max-height: 360px; overflow:auto; padding-right: 4px;">${listHtml}</div>
+                </div>
+            `,
+            showConfirmButton: false,
+            showCancelButton: true,
+            cancelButtonText: 'Fechar',
+            background: '#000000',
+            color: '#FAB464'
+        });
+
+        // se fechou, não faz nada
+        if (res.isDismissed) return;
+    }
+
+    // Delegação de clique dentro do modal (SweetAlert2)
+    document.addEventListener('click', (e) => {
+        const btn = e.target?.closest?.('#cat-pick button[data-cat]');
+        if (!btn) return;
+        const val = btn.getAttribute('data-cat') || '';
+        const input = document.getElementById('cmd-category');
+        if (input) input.value = val;
+        Swal.close();
+    });
+
+    function filterCommands() {
+        renderCommandList();
+    }
+
+    function renderCommandList() {
+        const q = (document.getElementById('cmd-search')?.value || '').toLowerCase();
+        const items = document.getElementById('cmd-items');
+        if (!items) return;
+        const filtered = COMMANDS.filter(c => {
+            const hay = `${c.trigger} ${c.name || ''} ${c.category || ''} ${c.description || ''}`.toLowerCase();
+            return !q || hay.includes(q);
+        });
+        if (filtered.length === 0) {
+            items.innerHTML = `<div style="color:var(--text-muted); padding: 10px;">Nenhum comando.</div>`;
+            return;
+        }
+        items.innerHTML = filtered.map(c => {
+            const active = c._id === ACTIVE_CMD_ID ? 'active' : '';
+            const state = c.enabled ? '<span style="color: var(--success)">●</span>' : '<span style="color: var(--danger)">●</span>';
+            return `
+                <div class="cmd-item ${active}" onclick="selectCommand('${c._id}')">
+                    <div>
+                        <div class="cmd-tag">${state} ${c.trigger}</div>
+                        <div class="cmd-muted">${(c.category || '🧩 DINÂMICO')} • ${c.rankRequired || 'Membro'}</div>
+                    </div>
+                    <div style="color:var(--text-muted); font-size:0.8rem;">${(c.actions || []).length} ações</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function selectCommand(id) {
+        ACTIVE_CMD_ID = id;
+        renderCommandList();
+        const cmd = COMMANDS.find(c => c._id === id);
+        if (!cmd) return;
+
+        document.getElementById('cmd-empty').style.display = 'none';
+        document.getElementById('cmd-form').style.display = 'block';
+
+        document.getElementById('cmd-trigger').value = cmd.trigger || '';
+        document.getElementById('cmd-name').value = cmd.name || '';
+        document.getElementById('cmd-category').value = cmd.category || '';
+        document.getElementById('cmd-desc').value = cmd.description || '';
+        document.getElementById('cmd-enabled').checked = cmd.enabled !== false;
+        document.getElementById('cmd-override-reserved').checked = cmd.overrideReserved === true;
+        document.getElementById('cmd-rank').value = cmd.rankRequired || 'Membro';
+        document.getElementById('cmd-cooldown').value = cmd.cooldownMs || 0;
+
+        // allowed groups
+        setTimeout(() => {
+            const allowed = cmd.allowedGroups || [];
+            renderGroupChecklist('cmd-allowed-groups', allowed);
+        }, 100);
+
+        renderActions(cmd.actions || []);
+        await loadLogs();
+        document.getElementById('cmd-preview').innerText = '(preview aqui)';
+    }
+
+    function createNewCommand() {
+        ACTIVE_CMD_ID = null;
+        document.getElementById('cmd-empty').style.display = 'none';
+        document.getElementById('cmd-form').style.display = 'block';
+        document.getElementById('cmd-trigger').value = '!novo';
+        document.getElementById('cmd-name').value = '';
+        document.getElementById('cmd-category').value = '🧩 DINÂMICO';
+        document.getElementById('cmd-desc').value = '';
+        document.getElementById('cmd-enabled').checked = true;
+        document.getElementById('cmd-override-reserved').checked = false;
+        document.getElementById('cmd-rank').value = 'Membro';
+        document.getElementById('cmd-cooldown').value = 0;
+        renderGroupChecklist('cmd-allowed-groups', []);
+        renderActions([{ type: 'sendText', config: { text: 'Olá {{sender.name}}!' } }]);
+        document.getElementById('cmd-preview').innerText = '(preview aqui)';
+        document.getElementById('cmd-logs').innerText = 'Nenhuma execução ainda.';
+        renderCommandList();
+    }
+
+    function renderActions(actions) {
+        const cont = document.getElementById('actions-container');
+        lastFocusedEl = null;
+        cont.innerHTML = actions.map((a, idx) => actionCardHtml(a, idx)).join('');
+    }
+
+    function actionCardHtml(action, idx) {
+        const type = action.type || 'sendText';
+        const cfg = action.config || {};
+        const commonHead = `
+            <div class="action-head">
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <span style="color: var(--accent); font-weight:700;">#${idx + 1}</span>
+                    <select data-action-type="${idx}" onchange="onActionTypeChange(${idx})">
+                        <option value="sendText" ${type === 'sendText' ? 'selected' : ''}>Enviar Texto</option>
+                        <option value="sendReaction" ${type === 'sendReaction' ? 'selected' : ''}>Reagir</option>
+                        <option value="delay" ${type === 'delay' ? 'selected' : ''}>Delay</option>
+                        <option value="sendImageUrl" ${type === 'sendImageUrl' ? 'selected' : ''}>Enviar Imagem (URL)</option>
+                        <option value="sendStickerUrl" ${type === 'sendStickerUrl' ? 'selected' : ''}>Enviar Sticker (URL)</option>
+                        <option value="setVar" ${type === 'setVar' ? 'selected' : ''}>Definir Variável</option>
+                        <option value="httpRequest" ${type === 'httpRequest' ? 'selected' : ''}>Webhook (HTTP)</option>
+                        <option value="validate" ${type === 'validate' ? 'selected' : ''}>Validar (Stop)</option>
+                        <option value="if" ${type === 'if' ? 'selected' : ''}>Se / Então</option>
+                        <option value="setUserBio" ${type === 'setUserBio' ? 'selected' : ''}>Definir Bio do Usuário</option>
+                        <option value="addUserCargo" ${type === 'addUserCargo' ? 'selected' : ''}>Adicionar Cargo</option>
+                        <option value="removeUserCargo" ${type === 'removeUserCargo' ? 'selected' : ''}>Remover Cargo</option>
+                    </select>
+                </div>
+                <button type="button" class="btn-danger-mini" onclick="removeAction(${idx})"><i class="fas fa-times"></i></button>
+            </div>
+        `;
+
+        const body = (() => {
+            if (type === 'sendText') {
+                return `<label>Texto</label><textarea rows="3" data-action-key="${idx}" data-action-field="text">${(cfg.text || '').replace(/</g,'&lt;')}</textarea>`;
+            }
+            if (type === 'sendReaction') {
+                return `<label>Emoji</label><input data-action-key="${idx}" data-action-field="emoji" value="${(cfg.emoji || '✅').replace(/</g,'&lt;')}" />`;
+            }
+            if (type === 'delay') {
+                return `<label>Milissegundos</label><input type="number" min="0" data-action-key="${idx}" data-action-field="ms" value="${cfg.ms || 1000}" />`;
+            }
+            if (type === 'sendImageUrl') {
+                return `
+                    <label>URL da imagem</label>
+                    <input data-action-key="${idx}" data-action-field="url" value="${(cfg.url || '').replace(/</g,'&lt;')}" placeholder="https://..." />
+                    <label>Legenda (opcional)</label>
+                    <textarea rows="2" data-action-key="${idx}" data-action-field="caption">${(cfg.caption || '').replace(/</g,'&lt;')}</textarea>
+                `;
+            }
+            if (type === 'sendStickerUrl') {
+                return `
+                    <label>URL da imagem</label>
+                    <input data-action-key="${idx}" data-action-field="url" value="${(cfg.url || '').replace(/</g,'&lt;')}" placeholder="https://..." />
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                            <label>Pack</label>
+                            <input data-action-key="${idx}" data-action-field="pack" value="${(cfg.pack || 'Academy').replace(/</g,'&lt;')}" />
+                        </div>
+                        <div>
+                            <label>Autor</label>
+                            <input data-action-key="${idx}" data-action-field="author" value="${(cfg.author || 'Academy System').replace(/</g,'&lt;')}" />
+                        </div>
+                    </div>
+                `;
+            }
+            if (type === 'setVar') {
+                return `
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                            <label>Nome</label>
+                            <input data-action-key="${idx}" data-action-field="name" value="${(cfg.name || 'x').replace(/</g,'&lt;')}" placeholder="Ex: http" />
+                        </div>
+                        <div>
+                            <label>Valor</label>
+                            <input data-action-key="${idx}" data-action-field="value" value="${(cfg.value || '').replace(/</g,'&lt;')}" placeholder="Ex: {{sender.name}}" />
+                        </div>
+                    </div>
+                    <div class="cmd-muted" style="margin-top:8px;">Use depois como {{vars.NOME}} (ex.: {{vars.x}})</div>
+                `;
+            }
+            if (type === 'httpRequest') {
+                return `
+                    <div class="cmd-muted">Requer <b>ALLOW_HTTP_ACTION=true</b> no .env</div>
+                    <div style="display:grid; grid-template-columns: 140px 1fr; gap: 12px; margin-top:10px;">
+                        <div>
+                            <label>Método</label>
+                            <select data-action-key="${idx}" data-action-field="method">
+                                <option value="GET" ${(cfg.method || 'GET').toUpperCase() === 'GET' ? 'selected' : ''}>GET</option>
+                                <option value="POST" ${(cfg.method || '').toUpperCase() === 'POST' ? 'selected' : ''}>POST</option>
+                                <option value="PUT" ${(cfg.method || '').toUpperCase() === 'PUT' ? 'selected' : ''}>PUT</option>
+                                <option value="PATCH" ${(cfg.method || '').toUpperCase() === 'PATCH' ? 'selected' : ''}>PATCH</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>URL</label>
+                            <input data-action-key="${idx}" data-action-field="url" value="${(cfg.url || '').replace(/</g,'&lt;')}" placeholder="https://..." />
+                        </div>
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                            <label>Headers (JSON)</label>
+                            <textarea rows="3" data-action-key="${idx}" data-action-field="headersJson" placeholder='{"Content-Type":"application/json"}'>${(cfg.headersJson || '').replace(/</g,'&lt;')}</textarea>
+                        </div>
+                        <div>
+                            <label>Body (opcional)</label>
+                            <textarea rows="3" data-action-key="${idx}" data-action-field="body" placeholder='{"text":"Olá {{sender.name}}"}'>${(cfg.body || '').replace(/</g,'&lt;')}</textarea>
+                        </div>
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                        <div>
+                            <label>Salvar em (vars.NOME)</label>
+                            <input data-action-key="${idx}" data-action-field="storeAs" value="${(cfg.storeAs || 'http').replace(/</g,'&lt;')}" />
+                        </div>
+                        <div>
+                            <label>Timeout (ms)</label>
+                            <input type="number" min="500" max="30000" data-action-key="${idx}" data-action-field="timeoutMs" value="${cfg.timeoutMs || 10000}" />
+                        </div>
+                        <div>
+                            <label>Parse JSON</label>
+                            <select data-action-key="${idx}" data-action-field="parseJson">
+                                <option value="false" ${(String(cfg.parseJson) === 'false' || !cfg.parseJson) ? 'selected' : ''}>Não</option>
+                                <option value="true" ${(String(cfg.parseJson) === 'true') ? 'selected' : ''}>Sim</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="cmd-muted" style="margin-top:8px;">A resposta vira {{vars.NOME.status}}, {{vars.NOME.text}} e {{vars.NOME.json.*}}</div>
+                `;
+            }
+            if (type === 'validate') {
+                const op = (cfg.op || '==');
+                const stop = (cfg.stop === undefined ? true : (String(cfg.stop) === 'true'));
+                return `
+                    <div class="cmd-muted">Se falhar, envia uma mensagem e para o comando.</div>
+                    <div style="display:grid; grid-template-columns: 1fr 160px 1fr; gap: 12px;">
+                        <div>
+                            <label>Esquerda</label>
+                            <input data-action-key="${idx}" data-action-field="left" value="${(cfg.left || '{{argText}}').replace(/</g,'&lt;')}" placeholder="Ex: {{argText}}" />
+                        </div>
+                        <div>
+                            <label>Operador</label>
+                            <select data-action-key="${idx}" data-action-field="op">
+                                <option value="==" ${op === '==' ? 'selected' : ''}>==</option>
+                                <option value="!=" ${op === '!=' ? 'selected' : ''}>!=</option>
+                                <option value=">" ${op === '>' ? 'selected' : ''}>&gt;</option>
+                                <option value=">=" ${op === '>=' ? 'selected' : ''}>&gt;=</option>
+                                <option value="<" ${op === '<' ? 'selected' : ''}>&lt;</option>
+                                <option value="<=" ${op === '<=' ? 'selected' : ''}>&lt;=</option>
+                                <option value="contains" ${op === 'contains' ? 'selected' : ''}>contains</option>
+                                <option value="startsWith" ${op === 'startsWith' ? 'selected' : ''}>startsWith</option>
+                                <option value="endsWith" ${op === 'endsWith' ? 'selected' : ''}>endsWith</option>
+                                <option value="exists" ${op === 'exists' ? 'selected' : ''}>exists</option>
+                                <option value="notExists" ${op === 'notExists' ? 'selected' : ''}>notExists</option>
+                                <option value="regex" ${op === 'regex' ? 'selected' : ''}>regex</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Direita</label>
+                            <input data-action-key="${idx}" data-action-field="right" value="${(cfg.right || '').replace(/</g,'&lt;')}" placeholder="Ex: 123 | /padrao/i" />
+                        </div>
+                    </div>
+                    <label>Mensagem ao falhar</label>
+                    <textarea rows="2" data-action-key="${idx}" data-action-field="failText">${(cfg.failText || '⚠️ Use: !comando <algo>').replace(/</g,'&lt;')}</textarea>
+                    <label style="margin-top:8px; display:flex; gap:10px; align-items:center;">
+                        <input type="checkbox" data-action-key="${idx}" data-action-field="stop" ${stop ? 'checked' : ''} style="width:auto;" />
+                        <span style="color: var(--text-muted);">Parar o comando ao falhar</span>
+                    </label>
+                `;
+            }
+            if (type === 'if') {
+                const op = (cfg.op || '==');
+                const ci = (cfg.caseInsensitive === true || String(cfg.caseInsensitive || '').toLowerCase() === 'true');
+                return `
+                    <div class="cmd-muted">Executa THEN/ELSE baseado numa condição simples.</div>
+                    <div style="display:grid; grid-template-columns: 1fr 160px 1fr; gap: 12px;">
+                        <div>
+                            <label>Esquerda</label>
+                            <input data-action-key="${idx}" data-action-field="left" value="${(cfg.left || '{{sender.rank}}').replace(/</g,'&lt;')}" placeholder="Ex: {{sender.rank}}" />
+                        </div>
+                        <div>
+                            <label>Operador</label>
+                            <select data-action-key="${idx}" data-action-field="op">
+                                <option value="==" ${op === '==' ? 'selected' : ''}>==</option>
+                                <option value="!=" ${op === '!=' ? 'selected' : ''}>!=</option>
+                                <option value=">" ${op === '>' ? 'selected' : ''}>&gt;</option>
+                                <option value=">=" ${op === '>=' ? 'selected' : ''}>&gt;=</option>
+                                <option value="<" ${op === '<' ? 'selected' : ''}>&lt;</option>
+                                <option value="<=" ${op === '<=' ? 'selected' : ''}>&lt;=</option>
+                                <option value="contains" ${op === 'contains' ? 'selected' : ''}>contains</option>
+                                <option value="startsWith" ${op === 'startsWith' ? 'selected' : ''}>startsWith</option>
+                                <option value="endsWith" ${op === 'endsWith' ? 'selected' : ''}>endsWith</option>
+                                <option value="exists" ${op === 'exists' ? 'selected' : ''}>exists</option>
+                                <option value="notExists" ${op === 'notExists' ? 'selected' : ''}>notExists</option>
+                                <option value="regex" ${op === 'regex' ? 'selected' : ''}>regex</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Direita</label>
+                            <input data-action-key="${idx}" data-action-field="right" value="${(cfg.right || 'Master').replace(/</g,'&lt;')}" placeholder="Ex: Master | /padrao/i" />
+                        </div>
+                    </div>
+                    <label style="margin-top:8px; display:flex; gap:10px; align-items:center;">
+                        <input type="checkbox" data-action-key="${idx}" data-action-field="caseInsensitive" ${ci ? 'checked' : ''} style="width:auto;" />
+                        <span style="color: var(--text-muted);">Ignorar maiúsculas/minúsculas</span>
+                    </label>
+                    <label>Então (THEN) - Texto</label>
+                    <textarea rows="2" data-action-key="${idx}" data-action-field="thenText">${(cfg.thenText || '✅ OK').replace(/</g,'&lt;')}</textarea>
+                    <label>Senão (ELSE) - Texto</label>
+                    <textarea rows="2" data-action-key="${idx}" data-action-field="elseText">${(cfg.elseText || '❌ Negado').replace(/</g,'&lt;')}</textarea>
+                `;
+            }
+            if (type === 'setUserBio') {
+                return `<label>Bio</label><textarea rows="2" data-action-key="${idx}" data-action-field="bio">${(cfg.bio || '').replace(/</g,'&lt;')}</textarea>`;
+            }
+            if (type === 'addUserCargo' || type === 'removeUserCargo') {
+                return `<label>Cargo</label><input data-action-key="${idx}" data-action-field="cargo" value="${(cfg.cargo || '').replace(/</g,'&lt;')}" placeholder="Ex: 🛡️ Moderador" />`;
+            }
+            return `<div style="color:var(--text-muted)">Tipo não suportado no editor.</div>`;
+        })();
+
+        return `<div class="action-card" data-action-index="${idx}">${commonHead}${body}</div>`;
+    }
+
+    function getActionsFromDom() {
+        const cards = Array.from(document.querySelectorAll('#actions-container .action-card'));
+        const actions = [];
+        for (const card of cards) {
+            const idx = Number(card.getAttribute('data-action-index'));
+            const typeSel = card.querySelector(`select[data-action-type="${idx}"]`);
+            const type = typeSel?.value || 'sendText';
+            const cfg = {};
+            card.querySelectorAll('[data-action-field]').forEach(el => {
+                const field = el.getAttribute('data-action-field');
+                if (el.type === 'checkbox') cfg[field] = el.checked;
+                else cfg[field] = el.value;
+            });
+            actions.push({ type, config: cfg });
+        }
+        return actions;
+    }
+
+    function addAction(type) {
+        const current = getActionsFromDom();
+        const cfg = {};
+        if (type === 'sendText') cfg.text = 'Texto...';
+        if (type === 'sendReaction') cfg.emoji = '✅';
+        if (type === 'delay') cfg.ms = 1000;
+        if (type === 'sendImageUrl') { cfg.url = ''; cfg.caption = ''; }
+        if (type === 'sendStickerUrl') { cfg.url = ''; cfg.pack = 'Academy'; cfg.author = 'Academy System'; }
+        if (type === 'setVar') { cfg.name = 'x'; cfg.value = '{{sender.name}}'; }
+        if (type === 'httpRequest') { cfg.method = 'GET'; cfg.url = ''; cfg.headersJson = '{"Content-Type":"application/json"}'; cfg.body = ''; cfg.storeAs = 'http'; cfg.timeoutMs = 10000; cfg.parseJson = 'true'; }
+        if (type === 'validate') { cfg.left = '{{argText}}'; cfg.op = 'exists'; cfg.right = ''; cfg.failText = '⚠️ Use: !comando <algo>'; cfg.stop = true; }
+        if (type === 'if') { cfg.left = '{{sender.rank}}'; cfg.op = '=='; cfg.right = 'Master'; cfg.caseInsensitive = true; cfg.thenText = '✅ OK'; cfg.elseText = '❌ Negado'; }
+        if (type === 'setUserBio') cfg.bio = '';
+        if (type === 'addUserCargo' || type === 'removeUserCargo') cfg.cargo = '';
+        current.push({ type, config: cfg });
+        renderActions(current);
+    }
+
+    function removeAction(idx) {
+        const current = getActionsFromDom().filter((_, i) => i !== idx);
+        renderActions(current);
+    }
+
+    function onActionTypeChange(idx) {
+        const current = getActionsFromDom();
+        const type = document.querySelector(`select[data-action-type="${idx}"]`)?.value || 'sendText';
+        current[idx] = { type, config: {} };
+        renderActions(current);
+    }
+
+    async function saveCommand(e) {
+        e.preventDefault();
+        const payload = {
+            trigger: document.getElementById('cmd-trigger').value,
+            name: document.getElementById('cmd-name').value,
+            category: document.getElementById('cmd-category').value,
+            description: document.getElementById('cmd-desc').value,
+            enabled: document.getElementById('cmd-enabled').checked,
+            overrideReserved: document.getElementById('cmd-override-reserved').checked,
+            rankRequired: document.getElementById('cmd-rank').value,
+            cooldownMs: Number(document.getElementById('cmd-cooldown').value || 0) || 0,
+            allowedGroups: getSelectedGroupIds('cmd-allowed-groups'),
+            actions: getActionsFromDom()
+        };
+
+        let res;
+        if (!ACTIVE_CMD_ID) {
+            res = await apiFetch('/api/dynamic-commands', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        } else {
+            res = await apiFetch(`/api/dynamic-commands/${ACTIVE_CMD_ID}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        }
+        const json = await res.json();
+        if (!json.success) {
+            Swal.fire({icon:'error', title:'Erro', text: json.message || 'Falha ao salvar', background:'#1c1c1f', color:'#fff'});
+            return;
+        }
+        await loadCommands();
+        if (!ACTIVE_CMD_ID && json.command?._id) ACTIVE_CMD_ID = json.command._id;
+        renderCommandList();
+        Swal.fire({icon:'success', title:'Salvo', background:'#1c1c1f', color:'#fff', confirmButtonColor:'var(--primary)'});
+    }
+
+    async function deleteCommand() {
+        if (!ACTIVE_CMD_ID) {
+            Swal.fire({icon:'info', title:'Nada para apagar', background:'#1c1c1f', color:'#fff'});
+            return;
+        }
+        const confirm = await Swal.fire({
+            icon:'warning',
+            title:'Apagar comando?',
+            text:'Essa ação não pode ser desfeita.',
+            showCancelButton:true,
+            confirmButtonText:'Apagar',
+            cancelButtonText:'Cancelar',
+            background:'#1c1c1f',
+            color:'#fff',
+            confirmButtonColor:'var(--danger)'
+        });
+        if (!confirm.isConfirmed) return;
+        await apiFetch(`/api/dynamic-commands/${ACTIVE_CMD_ID}`, { method: 'DELETE' });
+        ACTIVE_CMD_ID = null;
+        await loadCommands();
+        renderCommandList();
+        document.getElementById('cmd-form').style.display='none';
+        document.getElementById('cmd-empty').style.display='block';
+        document.getElementById('cmd-logs').innerText = 'Nenhuma execução ainda.';
+    }
+
+    function exportCommands() {
+        const blob = new Blob([JSON.stringify(COMMANDS, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `academy-dynamic-commands.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    async function importCommands(ev) {
+        try {
+            const file = ev.target.files?.[0];
+            if (!file) return;
+            const text = await file.text();
+            const list = JSON.parse(text);
+            if (!Array.isArray(list)) throw new Error('JSON inválido');
+            for (const cmd of list) {
+                const payload = {
+                    trigger: cmd.trigger,
+                    name: cmd.name,
+                    category: cmd.category,
+                    description: cmd.description,
+                    enabled: cmd.enabled,
+                    overrideReserved: cmd.overrideReserved,
+                    rankRequired: cmd.rankRequired,
+                    allowedGroups: cmd.allowedGroups,
+                    cooldownMs: cmd.cooldownMs,
+                    actions: cmd.actions
+                };
+                await apiFetch('/api/dynamic-commands', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            }
+            await loadCommands();
+            renderCommandList();
+            Swal.fire({icon:'success', title:'Importado', background:'#1c1c1f', color:'#fff', confirmButtonColor:'var(--primary)'});
+        } catch (e) {
+            Swal.fire({icon:'error', title:'Erro ao importar', text: String(e.message || e), background:'#1c1c1f', color:'#fff'});
+        } finally {
+            ev.target.value = '';
+        }
+    }
+
+    function renderPreview() {
+        const cmd = ACTIVE_CMD_ID ? COMMANDS.find(c => c._id === ACTIVE_CMD_ID) : null;
+        const actions = getActionsFromDom();
+        const ctx = {
+            sender: { name: 'Usuário Exemplo', rank: 'Membro', phone: '5582...', isAdmin: false, isSuperAdmin: true, isOwner: false, isDev: false, isMaster: false },
+            group: { name: 'Grupo Exemplo', jid: '1203...@g.us', isGroup: true },
+            args: ['arg1', 'arg2'],
+            argText: 'texto livre',
+            command: document.getElementById('cmd-trigger').value,
+            vars: {
+                http: { status: 200, text: 'ok', json: { ok: true } }
+            }
+        };
+
+        const render = (tpl) => String(tpl || '').replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_, raw) => {
+            const path = String(raw || '').trim().split('.').map(p=>p.trim()).filter(Boolean);
+            let cur = ctx;
+            for (const part of path) {
+                if (cur === null || cur === undefined) return '';
+                if (Array.isArray(cur)) {
+                    const idx = Number(part);
+                    cur = Number.isFinite(idx) ? cur[idx] : undefined;
+                } else {
+                    cur = cur[part];
+                }
+            }
+            return (cur === null || cur === undefined) ? '' : String(cur);
+        });
+
+        const lines = [];
+        for (const a of actions) {
+            if (a.type === 'sendText') lines.push(`(texto)\n${render(a.config.text)}`);
+            if (a.type === 'sendReaction') lines.push(`(reação) ${render(a.config.emoji)}`);
+            if (a.type === 'delay') lines.push(`(delay) ${a.config.ms}ms`);
+            if (a.type === 'sendImageUrl') lines.push(`(imagem) ${render(a.config.url)}\n${render(a.config.caption || '')}`.trim());
+            if (a.type === 'sendStickerUrl') lines.push(`(sticker) ${render(a.config.url)}\nPack: ${render(a.config.pack)} | Autor: ${render(a.config.author)}`);
+            if (a.type === 'setVar') {
+                const name = String(a.config.name || '').trim() || 'x';
+                const value = render(a.config.value || '');
+                ctx.vars = ctx.vars || {};
+                ctx.vars[name] = value;
+                lines.push(`(var) vars.${name} = ${value}`);
+            }
+            if (a.type === 'httpRequest') {
+                const storeAs = String(a.config.storeAs || 'http').trim() || 'http';
+                const method = String(a.config.method || 'GET').toUpperCase();
+                const url = render(a.config.url || '');
+                const body = render(a.config.body || '');
+                ctx.vars = ctx.vars || {};
+                ctx.vars[storeAs] = { status: 200, text: '(simulado)', json: { ok: true } };
+                lines.push(`(webhook) ${method} ${url}${body ? `\nBody: ${body}` : ''}\n-> salva em vars.${storeAs}.status/text/json`);
+            }
+            if (a.type === 'validate') {
+                const left = render(a.config.left || '');
+                const op = String(a.config.op || '==');
+                const right = render(a.config.right || '');
+                const failText = render(a.config.failText || '⚠️ Validação falhou');
+                lines.push(`(validar) ${left} ${op} ${right}\nFalha: ${failText}`);
+            }
+            if (a.type === 'if') {
+                const left = render(a.config.left || '');
+                const op = String(a.config.op || '==');
+                const right = render(a.config.right || '');
+                const thenText = render(a.config.thenText || '');
+                const elseText = render(a.config.elseText || '');
+                lines.push(`(se) ${left} ${op} ${right}\nTHEN: ${thenText}\nELSE: ${elseText}`);
+            }
+            if (a.type === 'setUserBio') lines.push(`(bio) ${render(a.config.bio)}`);
+            if (a.type === 'addUserCargo') lines.push(`(cargo+) ${render(a.config.cargo)}`);
+            if (a.type === 'removeUserCargo') lines.push(`(cargo-) ${render(a.config.cargo)}`);
+        }
+        document.getElementById('cmd-preview').innerText = lines.join('\n\n— — —\n\n') || '(sem ações)';
+    }
+
+    async function loadLogs() {
+        if (!ACTIVE_CMD_ID) return;
+        const cmd = COMMANDS.find(c => c._id === ACTIVE_CMD_ID);
+        if (!cmd) return;
+        const res = await apiFetch(`/api/dynamic-commands/logs?trigger=${encodeURIComponent(cmd.trigger)}&limit=50`);
+        const json = await res.json();
+        if (!json.success) return;
+        const logs = json.logs || [];
+        const el = document.getElementById('cmd-logs');
+        if (!logs.length) { el.innerText = 'Nenhuma execução ainda.'; return; }
+        el.innerHTML = logs.map(l => {
+            const cls = l.ok ? 'log-ok' : 'log-bad';
+            const out = (l.outputs || []).map(o => `${o.type}: ${o.preview}`).join(' | ');
+            return `<div class="log-entry ${cls}">[${new Date(l.at).toLocaleString()}] ${l.trigger} • ${l.senderName || ''} • ${l.ok ? 'OK' : 'ERRO'} ${l.error ? '• ' + l.error : ''}${out ? '\n' + out : ''}</div>`;
+        }).join('');
+    }
+
+    socket.on('cmdlog', (data) => {
+        // Atualiza logs em tempo real quando o painel estiver aberto
+        const panel = document.getElementById('commands');
+        if (!panel || !panel.classList.contains('active')) return;
+        const el = document.getElementById('cmd-logs');
+        if (!el) return;
+        const cls = data.ok ? 'log-ok' : 'log-bad';
+        const out = (data.outputs || []).map(o => `${o.type}: ${o.preview}`).join(' | ');
+        const line = `<div class="log-entry ${cls}">[${new Date(data.at).toLocaleString()}] ${data.trigger} • ${data.ok ? 'OK' : 'ERRO'} ${data.error ? '• ' + data.error : ''}${out ? '\n' + out : ''}</div>`;
+        if (el.innerText.includes('Nenhuma execução')) el.innerHTML = '';
+        el.innerHTML = line + el.innerHTML;
+    });
 </script>
 </body>
 </html>

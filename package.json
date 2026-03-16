@@ -4,11 +4,13 @@
   "description": "WhatsApp bot using Baileys with group commands (e.g., '!-- sou hetero?')",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "db:migrate:profiles:dry": "node scripts/merge-lid-profiles.js",
+    "db:migrate:profiles:apply": "node scripts/merge-lid-profiles.js --apply"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "@whiskeysockets/baileys": "^7.0.0-rc.9",
+    "@whiskeysockets/baileys": "^6.7.21",
     "axios": "^1.13.2",
     "canvas": "^3.2.1",
     "cheerio": "^1.1.2",
@@ -16,6 +18,7 @@
     "cloudinary": "^2.9.0",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "ffmpeg-static": "^5.2.0",
     "moment": "^2.30.1",
     "mongoose": "^9.1.4",
     "multer": "^2.0.2",
@@ -27,6 +30,8 @@
     "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0",
     "socket.io": "^4.8.3",
-    "wa-sticker-formatter": "^4.4.4"
+    "soundcloud-downloader": "^1.0.0",
+    "wa-sticker-formatter": "^4.4.4",
+    "yt-search": "^2.13.1"
   }
 }

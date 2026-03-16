@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modelo Default Academy</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@700&family=Roboto:wght@400;500;700;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Yellowtail&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Cores */
+            --bg-dark: #1b1026;
+            --bg-card: #281b35;
+            --text-gold: #ffc850;
+            --text-white: #ffffff;
+            --text-gray: #b1a7bc;
+            --border-color: #3e2d4d;
+            --purple-bar: #7d12ff;
+            --box-money: #3d2a1e;
+
+            --card-width: 420px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #0f0816;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        /* Container Principal */
+        .profile-container {
+            width: 100%;
+            max-width: var(--card-width);
+            background-color: var(--bg-dark);
+            position: relative;
+            padding-bottom: 40px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+            /* Importante: overflow hidden impede que a imagem saia da caixa */
+            overflow: hidden;
+        }
+
+        /* 1. Header com Imagem e Fade */
+        .header-image {
+            width: 100%;
+            /* Aumentei para ficar bem vertical como na imagem */
+            height: 450px;
+
+            /* IMAGEM DE FUNDO (Cinza/Preto) */
+            background-image: url('https://placehold.co/420x580/gray/white?text=Img+Fundo+Vertical');
+            background-size: cover;
+            background-position: center top;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Gradiente para o texto ficar legível em cima da imagem */
+        .header-image::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* O gradiente começa transparente e fica roxo escuro a partir dos 60% */
+            background: linear-gradient(to bottom, transparent 40%, var(--bg-dark) 85%, var(--bg-dark) 100%);
+            z-index: 2;
+            /* Fica acima da foto, mas abaixo do texto */
+        }
+
+        /* 2. Avatar e Badge */
+        .avatar-section {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            /* AQUI ESTÁ O SEGREDO: Puxa o avatar MUITO pra cima (-260px) */
+            margin-top: -260px;
+            z-index: 10;
+            /* Fica acima de tudo */
+        }
+
+        .avatar-circle {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            border: 3px solid var(--text-gold);
+            /* Borda mais fina */
+            /* IMAGEM DO PERSONAGEM (Colorido) */
+            background-image: url('https://placehold.co/160x160/281b35/ffc850?text=Avatar');
+            background-size: cover;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.6);
+            position: relative;
+        }
+
+        .rank-badge {
+            position: absolute;
+            bottom: -10px;
+            /* Ajuste fino para centralizar na borda */
+            left: 50%;
+            transform: translateX(-50%);
+
+            /* Estilo da Fonte Nova */
+            font-family: 'Yellowtail', cursive;
+            font-size: 22px;
+            /* Aumentei pois essa fonte é menor */
+            font-weight: 400;
+
+            /* Cores */
+            color: #e5ff61;
+            text-shadow: -2px 1px 2px rgba(0, 0, 0, 0.95);
+
+            /* Borda e Espaçamento */
+            padding: 0px 10px 4px 10px;
+            bottom: -18px;
+            z-index: 11;
+        }
+
+        /* 3. Textos do Nome e Cargo */
+        .info-section {
+            text-align: center;
+            padding: 0 15px;
+            position: relative;
+            z-index: 20;
+            /* Garante que o texto fique SOBRE a imagem de fundo */
+            margin-top: 15px;
+        }
+
+        .char-name {
+            font-family: 'Roboto Condensed', sans-serif;
+            font-size: 36px;
+            /* Fonte maior */
+            font-weight: 700;
+            color: var(--text-white);
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            letter-spacing: -1px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+            /* Sombra para ler melhor */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            line-height: 1;
+        }
+
+        .tag-devs {
+            font-family: 'Roboto', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-gold);;
+            padding: 2px 4px;
+            border-radius: 2px;
+            transform: translateY(-5px);
+            /* Sobe um pouco a tag */
+            margin-bottom: 20px;
+
+        }
+
+        .role-primary {
+            font-size: 10px;
+            font-weight: 900;
+            color: var(--text-gold);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+        }
+
+        .role-secondary {
+            font-size: 11px;
+            color: #dcdcdc;
+            /* Um pouco mais claro que o cinza padrão */
+            line-height: 1.2;
+            max-width: 95%;
+            margin: 0 auto;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Divisor Dourado */
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--text-gold), transparent);
+            opacity: 0.5;
+            margin: 25px auto;
+            width: 90%;
+            position: relative;
+            z-index: 5;
+        }
+
+        /* 4. Estatísticas */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 0 10px;
+            position: relative;
+            z-index: 5;
+        }
+
+        .stat-val {
+            display: block;
+            color: var(--text-white);
+            font-weight: 900;
+            font-size: 19px;
+            margin-bottom: 2px;
+        }
+
+        .stat-label {
+            display: block;
+            color: var(--text-gray);
+            font-size: 8px;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        /* 5. Área de Dinheiro e Barra */
+        .resources-wrapper {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            padding: 0 25px;
+            margin-bottom: 30px;
+            gap: 15px;
+            position: relative;
+            z-index: 5;
+        }
+
+        .money-container {
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .money-label {
+            font-size: 8px;
+            font-weight: 700;
+            color: #a496b0;
+            /* Cor da label Fichas Academy */
+            text-transform: uppercase;
+            margin-bottom: -5px;
+            /* Cola na caixa */
+            margin-left: 2px;
+            position: relative;
+            top: -5px;
+            text-align: right;
+        }
+
+        .money-box {
+            position: relative;
+            background-color: var(--box-money);
+            border: 1px solid #5c4030;
+            border-radius: 6px;
+            padding: 2px 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 120px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .money-box i {
+            color: var(--text-gold);
+            font-size: 13px;
+        }
+
+        .money-value {
+            color: var(--text-gold);
+            font-weight: 900;
+            font-size: 16px;
+            margin-left: 30px; 
+        }
+
+        /* Barra de Progresso */
+        .bar-container {
+            flex-grow: 1;
+            height: 8px;
+            background-color: #2e1d42;
+            border-radius: 10px;
+            margin-bottom: 11px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            width: 65%;
+            height: 100%;
+            background-color: var(--purple-bar);
+            border-radius: 10px;
+            box-shadow: 0 0 10px var(--purple-bar);
+        }
+
+        /* 6. Grid do Inventário */
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            padding: 0 25px;
+            position: relative;
+            z-index: 5;
+        }
+
+        .inv-slot {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            height: 50px;
+            transition: 0.2s;
+        }
+
+        .inv-slot:hover {
+            border-color: var(--text-gold);
+        }
+
+        .pin{
+            position: absolute;
+            left: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+    </style>
+</head>
+
+<body>
+
+
+    <div class="profile-container">
+        <div class="header-image" id="header-image"></div>
+        <div class="avatar-section">
+            <div class="avatar-circle" id="avatar-circle">
+                <div class="rank-badge" id="rank-badge"></div>
+            </div>
+        </div>
+        <div class="info-section">
+            <h1 class="char-name" id="char-name">
+                <span id="display-name"></span>
+                <span class="tag-devs" id="tag-devs"></span>
+            </h1>
+            <div class="role-primary" id="role-primary"></div>
+            <div class="role-secondary" id="role-secondary"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="stats-grid">
+            <div>
+                <span class="stat-val" id="stat-groups"></span>
+                <span class="stat-label">Grupos</span>
+            </div>
+            <div>
+                <span class="stat-val" id="stat-messages"></span>
+                <span class="stat-label">Mensagens</span>
+            </div>
+            <div>
+                <span class="stat-val" id="stat-charisma"></span>
+                <span class="stat-label">Carisma</span>
+            </div>
+            <div>
+                <span class="stat-val" id="stat-prestige"></span>
+                <span class="stat-label">Prestígio</span>
+            </div>
+            <div>
+                <span class="stat-val" id="stat-collection"></span>
+                <span class="stat-label">Coleção</span>
+            </div>
+        </div>
+        <div class="resources-wrapper">
+            <div class="money-container">
+                <span class="money-label">Fichas Academy</span>
+                <div class="money-box">
+                    <img class="pin" id="pin-img" src="" width="70px">
+                    <span class="money-value" id="money-value"></span>
+                </div>
+            </div>
+        </div>
+        <div class="inventory-grid" id="inventory-grid"></div>
+    </div>
+
+    <script>
+        // Simula um usuário realista (como viria do bot)
+        const user = {
+            id: '126663014776872',
+            name: 'DANIEL HIRTHOFFIN',
+            avatar: 'https://placehold.co/160x160/281b35/ffc850?text=Avatar',
+            background: 'https://placehold.co/420x580/gray/white?text=Img+Fundo+Vertical',
+            cargos: ['Diretor Institucional', 'Diretor de Desenvolvimento', 'Diretor Chefe'],
+            description: 'Diretor Chefe Institucional Academy e Presidente do Conselho de Integridade',
+            dev: true, // só aparece se true
+            rank: '#76',
+            stats: {
+                grupos: 12,
+                mensagens: 3258,
+                carisma: '32k',
+                prestigio: 420,
+                colecao: 15
+            },
+            academyCash: '40.200,00',
+            pin: 'https://upload.wikimedia.org/wikipedia/commons/3/3f/Placeholder_view_vector.svg', // pode ser null
+            inventory: [
+                '', '', '', '', '', '', '', '', '', '', '', '' // até 12 slots, pode ser url ou ''
+            ]
+        };
+
+        // Monta objeto data para o template
+        const data = {
+            backgroundUrl: user.background || '',
+            avatarUrl: user.avatar || '',
+            pinUrl: user.pin || '',
+            rankTag: user.rank || '',
+            displayName: user.name || '',
+            devTag: user.dev ? 'DEVS+' : '',
+            roles: (user.cargos && user.cargos.length) ? user.cargos.join(' • ') : '',
+            description: user.description || '',
+            groupCount: user.stats?.grupos ?? 0,
+            messageCount: user.stats?.mensagens ?? 0,
+            charisma: user.stats?.carisma ?? 0,
+            prestige: user.stats?.prestigio ?? 0,
+            collection: user.stats?.colecao ?? 0,
+            academyCash: user.academyCash || '0,00',
+            inventory: Array.isArray(user.inventory) ? user.inventory.slice(0,12) : Array(12).fill(''),
+        };
+
+        // Preenche campos dinâmicos (só mostra se existir)
+        document.getElementById('header-image').style.backgroundImage = data.backgroundUrl ? `url('${data.backgroundUrl}')` : '';
+        document.getElementById('avatar-circle').style.backgroundImage = data.avatarUrl ? `url('${data.avatarUrl}')` : '';
+        if (data.pinUrl) {
+            document.getElementById('pin-img').src = data.pinUrl;
+            document.getElementById('pin-img').style.display = '';
+        } else {
+            document.getElementById('pin-img').style.display = 'none';
+        }
+        document.getElementById('rank-badge').textContent = data.rankTag || '';
+        document.getElementById('display-name').textContent = data.displayName || '';
+        document.getElementById('tag-devs').textContent = data.devTag || '';
+        document.getElementById('tag-devs').style.display = data.devTag ? '' : 'none';
+        document.getElementById('role-primary').textContent = data.roles || '';
+        document.getElementById('role-primary').style.display = data.roles ? '' : 'none';
+        document.getElementById('role-secondary').textContent = data.description || '';
+        document.getElementById('role-secondary').style.display = data.description ? '' : 'none';
+        document.getElementById('stat-groups').textContent = data.groupCount || 0;
+        document.getElementById('stat-messages').textContent = data.messageCount || 0;
+        document.getElementById('stat-charisma').textContent = data.charisma || 0;
+        document.getElementById('stat-prestige').textContent = data.prestige || 0;
+        document.getElementById('stat-collection').textContent = data.collection || 0;
+        document.getElementById('money-value').textContent = data.academyCash || '0,00';
+
+        // Inventário (12 slots, só mostra imagem se houver)
+        const inv = document.getElementById('inventory-grid');
+        inv.innerHTML = '';
+        (data.inventory || Array(12).fill('')).forEach(url => {
+            const slot = document.createElement('div');
+            slot.className = 'inv-slot';
+            if (url) {
+                slot.style.backgroundImage = `url('${url}')`;
+                slot.style.backgroundSize = 'cover';
+                slot.style.backgroundPosition = 'center';
+            }
+            inv.appendChild(slot);
+        });
+    </script>
+
+</body>
+
+</html>

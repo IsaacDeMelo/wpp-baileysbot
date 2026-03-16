@@ -1,0 +1,501 @@
+                        text: txt,
+                        mentions: mentions
+                    }, { quoted: msg });
+
+                    return;
+                }
+
+                if (command === '!play') {
+                    if (!argText) return sock.sendMessage(jid, { text: '🎵 Use: !play <Nome da Música>' });
+
+                    // Reação imediata para feedback
+                    await sock.sendMessage(jid, { react: { text: '🎧', key: msg.key } });
+
+                    try {
+                        const ytPath = await ensureYtDlp();
+
+                        const query = String(argText || '').trim();
+                        const isUrl = /^(https?:\/\/|www\.)\S+/i.test(query);
+
+                        const extractYouTubeId = (u) => {
+                            const s = String(u || '');
+                            const m1 = s.match(/[?&]v=([a-zA-Z0-9_-]{6,})/);
+                            if (m1) return m1[1];
+                            const m2 = s.match(/youtu\.be\/([a-zA-Z0-9_-]{6,})/);
+                            if (m2) return m2[1];
+                            const m3 = s.match(/\/shorts\/([a-zA-Z0-9_-]{6,})/);
+                            if (m3) return m3[1];
+                            return null;
+                        };
+
+                        let title = '';
+                        let url = '';
+                        let duration = '?';
+
+                        if (isUrl) {
+                            url = query;
+                            // tenta obter title/duration (best-effort)
+                            try {
+                                const { stdout } = await execFilePromise(
+                                    ytPath,
+                                    [url, '--print', '%(title)s|%(webpage_url)s|%(duration_string)s', '--no-warnings', '--no-playlist'],
+                                    { maxBuffer: 1024 * 1024 }
+                                );
+                                const lines = String(stdout || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                                const lastWithPipe = [...lines].reverse().find(l => l.includes('|'));
+                                if (lastWithPipe) {
+                                    const parts = lastWithPipe.split('|');
+                                    title = String(parts[0] || '').trim();
+                                    url = String(parts[1] || url).trim();
+                                    duration = String(parts[2] || '').trim() || duration;
+                                }
+                            } catch { }
+                        } else {
+                            // 1. Busca no YouTube (Link e Título)
+                            const searchTarget = `ytsearch1:${query}`;
+                            const { stdout } = await execFilePromise(
+                                ytPath,
+                                [searchTarget, '--print', '%(title)s|%(webpage_url)s|%(duration_string)s', '--no-warnings', '--no-playlist'],
+                                { maxBuffer: 1024 * 1024 }
+                            );
+
+                            const lines = String(stdout || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                            const lastWithPipe = [...lines].reverse().find(l => l.includes('|'));
+                            if (!lastWithPipe) return sock.sendMessage(jid, { text: '❌ Música não encontrada.' });
+                            const parts = lastWithPipe.split('|');
+                            if (parts.length < 2 || !String(parts[1] || '').trim()) return sock.sendMessage(jid, { text: '❌ Música não encontrada.' });
+
+                            title = String(parts[0] || '').trim();
+                            url = String(parts[1] || '').trim();
+                            duration = String(parts[2] || '').trim() || '?';
+                        }
+
+                        if (!url) return sock.sendMessage(jid, { text: '❌ Música não encontrada.' });
+                        if (!title) title = isUrl ? 'Áudio' : query;
+
+                        // 2. Avisa que encontrou e envia o Link com Preview e Texto
+                        await sock.sendMessage(jid, { 
+                            text: `🎵 *Encontrado:* ${title}\n⏳ *Duração:* ${duration}\n🔗 ${url}\n\n_📥 Baixando áudio, aguarde..._`,
+                            contextInfo: {
+                                externalAdReply: {
+                                    title: title,
+                                    body: "Aguarde o envio do arquivo...",
+                                    thumbnailUrl: (() => {
+                                        const vid = extractYouTubeId(url);
+                                        return vid ? `https://i.ytimg.com/vi/${vid}/hqdefault.jpg` : undefined;
+                                    })(),
+                                    sourceUrl: url,
+                                    mediaType: 1,
+                                    renderLargerThumbnail: true
+                                }
+                            }
+                        }, { quoted: msg });
+
+                        // 3. Baixa o áudio temporariamente
+                        const tempFile = path.resolve(__dirname, `music-${Date.now()}.mp3`);
+                        
+                        // Baixa melhor áudio, converte pra mp3
+                        const downloadTarget = (/^(https?:\/\/|www\.)\S+/i.test(String(url))) ? url : `ytsearch1:${query}`;
+                        await execFilePromise(
+                            ytPath,
+                            ['-x', '--audio-format', 'mp3', '--audio-quality', '0', '-o', tempFile, downloadTarget, '--no-warnings', '--no-playlist'],
+                            { maxBuffer: 1024 * 1024 }
+                        );
+
+                        // 4. Envia o arquivo de áudio
+                        await sock.sendMessage(jid, { 
+                            audio: { url: tempFile }, 
+                            mimetype: 'audio/mp4', // WhatsApp aceita mp4/mpeg container para audio notes ou mp3
+                            ptt: false // false = áudio normal (música), true = nota de voz
+                        }, { quoted: msg });
+
+                        // 5. Remove arquivo temporário
+                        setTimeout(() => {
+                            if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
+                        }, 5000);
+
+                    } catch (err) {
+                        console.error('Erro no !play:', err);
+                        await sock.sendMessage(jid, { text: '❌ Falha ao processar o download. Tente novamente.' });
+                    }
+                    return;
+                }
+
+                if (command === '!filtrog') {
+                    if (!isDev) return;
+
+                    // 1. Definição do Filtro
+                    const mentionedJid = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+                    const filterText = argText.trim();
+
+                    if (!filterText && !mentionedJid) {
+                        return sock.sendMessage(jid, { text: '🔎 Use: !filtrog <Nome/@User>, <Nome do Grupo> ou <Quantidade SMS>' });
+                    }
+
+                    let users = [];
+                    let searchMode = ''; // 'USER' (Full) ou 'FILTER' (Parcial)
+
+                    // 2. Lógica de Busca no Banco de Dados
+
+                    // CASO A: Menção (@User)
+                    if (mentionedJid) {
+                        searchMode = 'USER';
+                        users = await UserProfile.find({ jid: mentionedJid });
+                    }
+                    // CASO B: Busca por Quantidade (Apenas Números)
+                    else if (/^\d+$/.test(filterText)) {
+                        searchMode = 'FILTER';
+                        const minMsgs = parseInt(filterText);
+                        // Busca quem tem pelo menos um grupo com mais mensagens que o solicitado
+                        users = await UserProfile.find({ "activeGroups.msgCount": { $gt: minMsgs } })
+                            .sort({ "activeGroups.msgCount": -1 }) // Ordena do maior para o menor
+                            .limit(20);
+                    }
+                    // CASO C: Busca Textual (Nome, Número, Grupo)
+                    else {
+                        const cleanNum = filterText.replace(/\D/g, ''); // Remove símbolos para buscar no telefone
+
+                        // Primeiro tenta buscar se é um USUÁRIO (pelo nome, jid ou telefone)
+                        const userQuery = [
+                            { name: { $regex: filterText, $options: 'i' } },
+                            { jid: { $regex: filterText, $options: 'i' } }
+                        ];
+                        if (cleanNum.length > 6) userQuery.push({ phoneNumber: { $regex: cleanNum } });
+
+                        const userResults = await UserProfile.find({ $or: userQuery }).limit(10);
+
+                        if (userResults.length > 0) {
+                            searchMode = 'USER'; // Encontrou pelo nome/número -> Mostra perfil completo
+                            users = userResults;
+                        } else {
+                            // Se não achou usuário, busca por NOME DE GRUPO
+                            const groupResults = await UserProfile.find({
+                                'activeGroups.groupName': { $regex: filterText, $options: 'i' }
+                            }).limit(20);
+                            
+                            if (groupResults.length > 0) {
+                                searchMode = 'FILTER'; // Encontrou pelo grupo -> Mostra só as linhas desse grupo
+                                users = groupResults;
+                            }
+                        }
+                    }
+
+                    if (users.length === 0) {
+                        return sock.sendMessage(jid, { text: `🔎 Nenhum resultado encontrado para: "${filterText}"` });
+                    }
+
+                    // 3. Montagem da Resposta (Formatação Visual Estrita)
+                    let response = "";
+                    let mentions = [];
+
+                    // Cabeçalho bonito
+                    const header = searchMode === 'USER' ? 'RELATÓRIO GLOBAL' : `FILTRO: "${filterText}"`;
+                    response += `🔎 *${header}*\n•\n`;
+
+                    for (const u of users) {
+                        const cleanId = cleanID(u.jid); // Função auxiliar para pegar só o número
+                        mentions.push(u.jid);
+
+                        // Cabeçalho do Usuário
+                        // Ex: @Isaac Xuxu Doce
+                        response += `@${cleanId} ${u.name}\n`;
+
+                        // --- FORMATAÇÃO DE ADVS GLOBAIS ---
+                        // Só mostra se tiver e se for busca de Usuário (Full)
+                        if (u.globalWarnings.length > 0 && searchMode === 'USER') {
+                            const count = String(u.globalWarnings.length).padStart(2, '0'); // Transforma 1 em "01"
+                            response += `> ╰> ${count} Adv Global\n`;
+                        }
+
+                        // --- FORMATAÇÃO DOS GRUPOS E ADVS LOCAIS ---
+                        // Ordena grupos por mensagem para ficar organizado
+                        const sortedGroups = u.activeGroups.sort((a, b) => b.msgCount - a.msgCount);
+                        let hasGroupShown = false;
+
+                        sortedGroups.forEach(g => {
+                            let showThisGroup = false;
+
+                            // DECISÃO: Mostrar ou não este grupo?
+                            if (searchMode === 'USER') {
+                                showThisGroup = true; // Mostra tudo
+                            } else if (searchMode === 'FILTER') {
+                                // Se for filtro numérico
+                                if (/^\d+$/.test(filterText)) {
+                                    if (g.msgCount > parseInt(filterText)) showThisGroup = true;
+                                }
+                                // Se for filtro de nome de grupo
+                                else {
+                                    if (g.groupName.toLowerCase().includes(filterText.toLowerCase())) showThisGroup = true;
+                                }
+                            }
+
+                            if (showThisGroup) {
+                                hasGroupShown = true;
+                                
+                                // Linha do Grupo: > Anellarium RPG • 320 sms
+                                response += `> ${g.groupName} • ${g.msgCount} sms\n`;
+
+                                // Checa se tem ADV neste grupo específico
+                                // Filtra warnings onde o JID do grupo bate com o grupo atual do loop
+                                const localAdvsCount = u.localWarnings.filter(w => w.groupJid === g.jid).length;
+
+                                if (localAdvsCount > 0) {
+                                    const countW = String(localAdvsCount).padStart(2, '0'); // "03"
+                                    response += `> ╰> ${countW} Advertências\n`;
+                                }
+                            }
+                        });
+
+                        // Se não mostrou nenhum grupo (caso raro de user sem grupo ativo)
+                        if (!hasGroupShown && searchMode === 'USER') {
+                            response += `> (Sem registro de grupos ativos)\n`;
+                        }
+                        
+                        response += `\n`; // Pula linha entre usuários
+                    }
+
+                    await sock.sendMessage(jid, { text: response, mentions: mentions });
+                    return;
+                }
+
+                // ============================
+                // 🛠️ UTILITÁRIOS
+                // ============================
+
+                if (command === '!sticker') {
+                    const media = await downloadMedia(msg);
+                    if (!media) return sock.sendMessage(jid, { text: 'Envie uma mídia.' });
+                    const sticker = new Sticker(media.buffer, {
+                        pack: 'Academy', author: 'Bot', type: StickerTypes.FULL, quality: 50
+                    });
+                    await sock.sendMessage(jid, await sticker.toMessage());
+                    return;
+                }
+
+                // Ping
+                if (command === '!ping') {
+                    const latencyTxt = `Latência: ${(Date.now() / 1000) - msgTimestamp}s`;
+
+                    // Se existir AutoRepo para !ping, responde com imagem/texto + latência
+                    if (isGroup) {
+                        try {
+                            const g = gConf || await GroupConfig.findOne({ jid });
+                            const localEntry = (g?.autoRepo || []).find(r => r?.enabled !== false && normalizeTrigger(r.trigger) === command);
+
+                            let entry = localEntry;
+                            let origin = 'local';
+
+                            if (!entry && g?.communityName) {
+                                const comm = await Community.findOne({ name: g.communityName });
+                                const commEntry = (comm?.autoRepo || []).find(r => r?.enabled !== false && normalizeTrigger(r.trigger) === command);
+                                if (commEntry) {
+                                    entry = commEntry;
+                                    origin = 'comunidade';
+                                }
+                            }
+
+                            if (entry?.response || entry?.imageUrl) {
+                                const ctx = {
+                                    sender: {
+                                        name: user?.name || msg.pushName || 'Desconhecido',
+                                        jid: cleanSender,
+                                        number: senderNumber,
+                                        rank: user?.rank || 'Membro',
+                                        isAdmin,
+                                        isSuperAdmin,
+                                        isOwner,
+                                        isDev,
+                                        isMaster
+                                    },
+                                    group: {
+                                        name: groupName,
+                                        jid,
+                                        isGroup
+                                    },
+                                    args,
+                                    argText,
+                                    command,
+                                    origin,
+                                    now: {
+                                        iso: new Date().toISOString(),
+                                        date: moment().format('DD/MM/YYYY'),
+                                        time: moment().format('HH:mm:ss')
+                                    }
+                                };
+
+                                const out = entry?.response ? renderTemplate(entry.response, ctx) : '';
+                                const caption = (out && out.trim()) ? (out.trim() + `\n\n${latencyTxt}`) : latencyTxt;
+                                const img = String(entry?.imageUrl || '').trim();
+
+                                if (img) {
+                                    await sock.sendMessage(jid, { image: { url: img }, caption }, { quoted: msg });
+                                    return;
+                                }
+                                await sock.sendMessage(jid, { text: caption }, { quoted: msg });
+                                return;
+                            }
+                        } catch { }
+                    }
+
+                    return sock.sendMessage(jid, { text: latencyTxt });
+                }
+
+                // ============================
+                // 🆕 NOVOS COMANDOS ACADEMY
+                // ============================
+
+                // 👑 PROMOÇÃO: DEV (Apenas Dono)
+                if (command === '!dev') {
+                    if (!isOwner) return sock.sendMessage(jid, { text: '⚠️ Apenas o Proprietário pode nomear DEVs.' });
+                    const target = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+                    if (!target) return sock.sendMessage(jid, { text: 'Marque o usuário.' });
+
+                    const tUser = await getUser(target);
+                    tUser.rank = 'Dev';
+                    await tUser.save();
+                    return sock.sendMessage(jid, { text: `👑 @${cleanID(target)} foi promovido a **DEV**!`, mentions: [target] });
+                }
+
+                // 🛡️ PROMOÇÃO: MASTER (Apenas Devs)
+                if (command === '!master') {
+                    if (!isDev) return sock.sendMessage(jid, { text: '⚠️ Apenas DEVs podem nomear Masters.' });
+                    const target = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+                    if (!target) return sock.sendMessage(jid, { text: 'Marque o usuário.' });
+
+                    const tUser = await getUser(target);
+                    tUser.rank = 'Master';
+                    await tUser.save();
+                    return sock.sendMessage(jid, { text: `🛡️ @${cleanID(target)} foi promovido a **MASTER**!`, mentions: [target] });
+                }
+
+                // 📉 REBAIXAMENTO: MEMBRO (Apenas Devs)
+                if (command === '!membro') {
+                    if (!isDev) return sock.sendMessage(jid, { text: '⚠️ Apenas DEVs podem rebaixar.' });
+                    const target = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+                    if (!target) return sock.sendMessage(jid, { text: 'Marque o usuário.' });
+
+                    const tUser = await getUser(target);
+                    
+                    // Proteção: não deixar rebaixar outro Dev (a menos que seja o Dono)
+                    if (tUser.rank === 'Dev' && !isOwner) {
+                         return sock.sendMessage(jid, { text: '⚠️ Você não pode rebaixar outro Desenvolvedor.' });
+                    }
+
+                    tUser.rank = 'Membro';
+                    await tUser.save();
+                    return sock.sendMessage(jid, { text: `📉 @${cleanID(target)} agora é um **MEMBRO** comum.`, mentions: [target] });
+                }
+
+                // ⚜️ CANONIZAR (Imunidade)
+                if (command === '!canonizar') {
+                    if (!isDev) return;
+                    const sub = args[0]?.toLowerCase();
+                    const target = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+                    if (!target) return sock.sendMessage(jid, { text: 'Mencione o usuário.' });
+
+                    const tUser = await getUser(target);
+
+                    if (sub === 'rmv') {
+                        tUser.isCanonized = false;
+                        await tUser.save();
+                        return sock.sendMessage(jid, { text: `💀 *DECRETO ACADEMY*\n\nO status de @${cleanID(target)} foi alterado para: *DESCANONIZADO*.\nJustificativa: Revogação de privilégios.\n\n_Status: Vulnerável_`, mentions: [target] });
+                    } else {
+                        tUser.isCanonized = true;
+                        await tUser.save();
+                        return sock.sendMessage(jid, { text: `📜 *DECRETO ACADEMY*\n\nO status de @${cleanID(target)} foi alterado para: *CANONIZADO*.\nJustificativa: Reconhecimento de mérito institucional.\n\n_Status: Imune a Penas e Expulsões_`, mentions: [target] });
+                    }
+                }
+
+                // 🖼️ LINKIMG (Com Preview)
+                if (command === '!linkimg') {
+                    const media = await downloadMedia(msg);
+                    if (!media || media.type !== 'image') return sock.sendMessage(jid, { text: 'Envie/Marque uma imagem.' });
+
+                    await sock.sendMessage(jid, { text: '⏳ Gerando link...' });
+
+                    cloudinary.uploader.upload_stream({ resource_type: 'image' }, async (err, result) => {
+                        if (err) return sock.sendMessage(jid, { text: 'Erro no upload.' });
+
+                        // Envia a imagem de volta COM o link na legenda (Gera o preview visual no zap)
+                        await sock.sendMessage(jid, {
+                            image: { url: result.secure_url },
+                            caption: `🔗 *Link Gerado:*\n${result.secure_url}`
+                        });
+                    }).end(media.buffer);
+                    return;
+                }
+
+                // --- COMANDO !ADDCARGO (Só Master/Dev) ---
+                if (command === '!addcargo') {
+                    if (!isMaster) return sock.sendMessage(jid, { text: '⚠️ Apenas Masters podem atribuir cargos.' });
+
+                    const target = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+                    const cargo = argText.replace(/@\d+/g, '').trim();
+
+                    if (!target || !cargo) return sock.sendMessage(jid, { text: '❌ Use: !addcargo @usuario NomeDoCargo' });
+
+                    // Garante que o usuário existe no DB usando a lógica robusta de getUser
+                    const tUser = await getUser(target); 
+                    
+                    // Adiciona o cargo se não duplicado (opcional não duplicar, mas push direto também serve)
+                    if (!tUser.cargos) tUser.cargos = [];
+                    tUser.cargos.push(cargo);
+                    await tUser.save();
+
+                    return sock.sendMessage(jid, { text: `✅ Cargo *"${cargo}"* atribuído a @${cleanID(target)}`, mentions: [target] });
+                }
+
+                // --- COMANDO !RMCARGO (Remove todos ou específico) ---
+                if (command === '!rmcargo') {
+                    if (!isMaster) return;
+                    const target = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+                    if (!target) return sock.sendMessage(jid, { text: '❌ Marque o usuário.' });
+
+                    const tUser = await getUser(target);
+                    // Se passar texto, remove só aquele cargo
+                    const cargoToRemove = argText.replace(/@\d+/g, '').trim();
+
+                    if (cargoToRemove) {
+                        tUser.cargos = (tUser.cargos || []).filter(c => c.toLowerCase() !== cargoToRemove.toLowerCase());
+                        await tUser.save();
+                        return sock.sendMessage(jid, { text: `🗑️ Cargo *"${cargoToRemove}"* removido de @${cleanID(target)}.`, mentions: [target] });
+                    } else {
+                        // Reseta tudo
+                        tUser.cargos = [];
+                        await tUser.save();
+                        return sock.sendMessage(jid, { text: `🗑️ Todos os cargos de @${cleanID(target)} foram removidos.`, mentions: [target] });
+                    }
+                }
+
+                // --- COMANDO !RGPERFIL (Versão Títulos) ---
+                if (command === '!rgperfil') {
+                    // Tenta pegar o alvo (marcado ou por número digitado)
+                    const target = getTarget() || cleanSender;
+                    const tUser = await getUser(target);
+
+                    let pfp;
+                    try {
+                        pfp = await sock.profilePictureUrl(target, 'image');
+                    } catch {
+                        pfp = 'https://i.imgur.com/62j1H2p.png'; // Fallback
+                    }
+
+                    // Gera o Buffer da imagem
+                    const buffer = await generateRG(tUser, pfp);
+
+                    await sock.sendMessage(jid, {
+                        image: buffer,
+                        caption: `📇 *IDENTIDADE ACADEMY OFICIAL*\n\nPropriedade de: *${tUser.name}*\nNível de Acesso: *${tUser.rank.toUpperCase()}*`,
+                        mentions: [target]
+                    }, { quoted: msg });
+                    return;
+                }
+                if (command === '!bio') {
+                    const newBio = argText;
+                    if (!newBio) return sock.sendMessage(jid, { text: '📝 Escreva sua bio.\nEx: !bio Mestre de RPG.' });
+
+                    user.bio = newBio;
+                    await user.save();
+                    return sock.sendMessage(jid, { text: '✅ Biografia atualizada!' });
+                }
+
