@@ -780,51 +780,6 @@ function extractMemoryFacts(text) {
         .filter(f => f.length >= 3 && f.length <= 120);
 }
 
-function clearEmbargoFields(userDoc) {
-    if (!userDoc.embargo) userDoc.embargo = {};
-    userDoc.embargo.active = false;
-    userDoc.embargo.reason = '';
-    userDoc.embargo.link = '';
-    userDoc.embargo.since = null;
-    userDoc.embargo.duration = '';
-    userDoc.embargo.endDate = null;
-    userDoc.embargo.admin = '';
-}
-
-async function concludeEmbargoIfExpired(userDoc) {
-    if (!userDoc?.embargo?.active) return false;
-    const endDate = userDoc.embargo.endDate ? new Date(userDoc.embargo.endDate) : null;
-    if (!endDate || isNaN(endDate.getTime())) return false;
-    if (Date.now() < endDate.getTime()) return false;
-
-    if (!Array.isArray(userDoc.embargoHistory)) userDoc.embargoHistory = [];
-    userDoc.embargoHistory.push({
-        reason: userDoc.embargo.reason,
-        link: userDoc.embargo.link,
-        since: userDoc.embargo.since,
-        duration: userDoc.embargo.duration,
-        endDate: userDoc.embargo.endDate,
-        admin: userDoc.embargo.admin,
-        concludedAt: new Date()
-    });
-
-    clearEmbargoFields(userDoc);
-    await userDoc.save();
-    return true;
-}
-
-async function concludeExpiredEmbargosBatch() {
-    const now = new Date();
-    const expired = await UserProfile.find({
-        'embargo.active': true,
-        'embargo.endDate': { $ne: null, $lte: now }
-    }).limit(200);
-
-    for (const u of expired) {
-        try { await concludeEmbargoIfExpired(u); } catch { }
-    }
-}
-
 function getNextId(array, prefix) {
     return `${prefix}${array.length + 1}`;
 }
