@@ -4587,8 +4587,8 @@ async function startBot() {
                         const raw = String(argText || '').trim();
                         const parts = raw.split('|').map(p => p.trim()).filter(Boolean);
                         const query = parts[0] || '';
-                        const forceSoundCloud = /^(?:sc|soundcloud)\s+/i.test(query);
-                        const normalizedQuery = forceSoundCloud ? query.replace(/^(?:sc|soundcloud)\s+/i, '').trim() : query;
+                        const forceYouTube = /^(?:yt|youtube)\s+/i.test(query);
+                        const normalizedQuery = forceYouTube ? query.replace(/^(?:yt|youtube)\s+/i, '').trim() : query.replace(/^(?:sc|soundcloud)\s+/i, '').trim();
                         if (!normalizedQuery) return sock.sendMessage(jid, { text: '🎵. Use: !play <Nome da Música>' });
 
                         const requestedCount = parseInt(parts[1] || '1', 10);
@@ -4596,6 +4596,7 @@ async function startBot() {
                         const count = Number.isFinite(requestedCount) ? Math.min(Math.max(requestedCount, 1), MAX_COUNT) : 1;
                         const isUrl = /^(https?:\/\/|www\.)\S+/i.test(normalizedQuery);
                         const isSoundCloudUrl = /soundcloud\.com|soundcloud\.app\.goo\.gl/i.test(normalizedQuery);
+                        const isYouTubeUrl = /(?:youtu\.be\/|youtube\.com\/|youtube\.com\/shorts\/)/i.test(normalizedQuery);
                         const MAX_SECONDS = 300;
 
                         const extractYouTubeId = (u) => {
@@ -4855,7 +4856,8 @@ async function startBot() {
                             }
                         };
 
-                        if (forceSoundCloud || isSoundCloudUrl) {
+                        // SoundCloud é o padrão; YouTube só é usado com prefixo "yt:" ou URL do YouTube
+                        if (!forceYouTube && !isYouTubeUrl) {
                             await runSoundCloudFlow(normalizedQuery);
                             return;
                         }
@@ -4898,6 +4900,7 @@ async function startBot() {
                             return;
                         }
 
+                        // Busca no YouTube quando forçado com prefixo "yt:"
                         const searchResult = await ytSearch(normalizedQuery);
                         const videos = Array.isArray(searchResult?.videos) ? searchResult.videos : [];
                         const parsed = videos.slice(0, 30).map((video, idx) => ({
@@ -4955,7 +4958,7 @@ async function startBot() {
                                 const raw = String(argText || '').trim();
                                 const parts = raw.split('|').map(p => p.trim()).filter(Boolean);
                                 const query = parts[0] || '';
-                                const fallbackQuery = query.replace(/^(?:sc|soundcloud)\s+/i, '').trim() || query;
+                                const fallbackQuery = query.replace(/^(?:sc|soundcloud|yt|youtube)\s+/i, '').trim() || query;
                                 const result = await scdl.search({ query: fallbackQuery, limit: 1, resourceType: 'tracks' });
                                 if (Array.isArray(result?.collection) && result.collection.length > 0) {
                                     const track = result.collection[0];
