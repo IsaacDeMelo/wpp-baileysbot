@@ -452,14 +452,25 @@
                     Oráculo
                 </h1>
             </div>
-            <div style="display: flex; gap: 20px; align-items: center;">
+            <div class="header-controls">
                 <div class="status-badge">
                     <div class="led" id="status-dot"></div>
                     <span id="status-text">Desconectado</span>
                 </div>
-                <button onclick="doLogout()" style="background:transparent; border:1px solid var(--danger); color:var(--danger); padding:8px 12px; border-radius:6px; cursor:pointer;">
-                    <i class="fas fa-power-off"></i>
-                </button>
+                <div class="quick-actions">
+                    <button class="btn-mini" type="button" onclick="refreshDashboardData()" title="Atualizar dados">
+                        <i class="fas fa-rotate"></i>
+                    </button>
+                    <button class="btn-mini" type="button" onclick="reconnectSocket()" title="Reconectar socket">
+                        <i class="fas fa-plug"></i>
+                    </button>
+                    <button id="campaign-auto-btn" class="btn-mini" type="button" onclick="toggleCampaignAutoRefresh()" title="Auto refresh campanhas">
+                        <i class="fas fa-clock"></i>
+                    </button>
+                    <button class="btn-mini danger" type="button" onclick="doLogout()" title="Sair">
+                        <i class="fas fa-power-off"></i>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -470,7 +481,7 @@
             <button class="nav-btn" onclick="showPanel('create', this)"><i class="fas fa-bullhorn"></i> Criar Campanha</button>
             <button class="nav-btn" onclick="showPanel('list', this)"><i class="fas fa-tasks"></i> Campanhas Ativas</button>
             <button class="nav-btn" onclick="showPanel('ai', this)"><i class="fas fa-microchip"></i> Cérebro Global</button>
-            <!-- Painel de comandos (No-Code) removido: use !autorepo no WhatsApp -->
+            <button class="nav-btn" onclick="showPanel('commands', this)"><i class="fas fa-hammer"></i> Command Builder</button>
             <button class="nav-btn" onclick="showPanel('logs', this)"><i class="fas fa-terminal"></i> Terminal</button>
         </div>
 
@@ -513,6 +524,7 @@
                     <select id="group-select-token"><option>Carregando...</option></select>
                     
                     <button class="btn-primary" onclick="generateToken()">Gerar Token Único</button>
+                    <button class="btn-mini" type="button" onclick="copyTokenResult()" style="margin-top:10px;">Copiar Token</button>
                     <div id="token-result" class="token-box"></div>
                 </div>
             </div>
@@ -522,9 +534,10 @@
                 <div class="card">
                     <h2><i class="fas fa-network-wired"></i> Criar Comunidade</h2>
                     <p>Interligue grupos para compartilhar banimentos e regras.</p>
-                    <div style="display: flex; gap: 10px;">
+                    <div style="display: grid; gap: 10px; grid-template-columns: 1fr;">
                         <input id="comm-name" placeholder="Nome da Comunidade">
-                        <button onclick="createComm()" class="btn-primary" style="margin:0; width:auto;">Criar</button>
+                        <input id="comm-desc" placeholder="Descrição da Comunidade">
+                        <button onclick="createComm()" class="btn-primary" style="margin:0; width:auto;">Gerar comando de criação</button>
                     </div>
                 </div>
             </div>
@@ -719,8 +732,13 @@
             <div id="logs" class="panel">
                 <div class="card">
                     <h2><i class="fas fa-terminal"></i> Logs do Servidor</h2>
+                    <div class="logs-toolbar">
+                        <input id="log-filter" placeholder="Filtrar logs..." oninput="setLogFilter(this.value)">
+                        <button id="log-pause-btn" class="btn-mini" type="button" onclick="toggleLogPause()">Pausar</button>
+                        <button class="btn-mini" type="button" onclick="downloadLogs()">Exportar</button>
+                        <button class="btn-mini" type="button" onclick="clearLogs()">Limpar</button>
+                    </div>
                     <div id="logs-container"></div>
-                    <button onclick="document.getElementById('logs-container').innerHTML=''" style="background:transparent; color:#666; border:1px solid #333; margin-top:10px; padding:5px; border-radius:4px; cursor:pointer;">Limpar</button>
                 </div>
             </div>
 
@@ -730,6 +748,10 @@
 <script>
     let ADMIN_TOKEN = localStorage.getItem('adminToken') || '';
     const socket = io({ auth: { token: ADMIN_TOKEN }, autoConnect: Boolean(ADMIN_TOKEN) });
+    let campaignRefreshTimer = null;
+    let campaignAutoRefresh = false;
+    let LOG_PAUSED = false;
+    let LOG_FILTER = '';
 
     function showLoginOverlay(reasonText = '') {
         ADMIN_TOKEN = '';
@@ -767,6 +789,13 @@
 
     // AUTH
     window.onload = () => {
+        const passInput = document.getElementById('admin-pass');
+        if (passInput) {
+            passInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') doLogin();
+            });
+        }
+
         if (localStorage.getItem('adminLoggedIn') && localStorage.getItem('adminToken')) showMainApp();
     }
     
@@ -797,7 +826,7 @@
 
     function doLogout() { localStorage.removeItem('adminLoggedIn'); localStorage.removeItem('adminToken'); location.reload(); }
     
-    function showMainApp() {
+    async function showMainApp() {
         document.getElementById('login-overlay').style.display='none';
         document.getElementById('main-app').style.display='grid';
         try {
@@ -806,17 +835,21 @@
                 socket.connect();
             }
         } catch (e) {}
-        loadAIConfig();
+        await refreshDashboardData();
+        await initCommandsPanel();
     }
 
     // UI
-    function showPanel(id, btn) {
+    async function showPanel(id, btn) {
         document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
         document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         btn.classList.add('active');
-        if(id === 'list') loadCampaigns();
-        // painel commands removido (use !autorepo)
+        if (id === 'list') await loadCampaigns();
+        if (id === 'commands') {
+            await initCommandsPanel();
+            if (ACTIVE_CMD_ID) await loadLogs();
+        }
     }
 
     function updateStatus(s, online) {
@@ -910,10 +943,21 @@
     });
 
     socket.on('log', msg => {
+        if (LOG_PAUSED) return;
+        const normalized = String(msg || '');
+        if (LOG_FILTER && !normalized.toLowerCase().includes(LOG_FILTER)) return;
+
+        const container = document.getElementById('logs-container');
+        if (!container) return;
+
         const div = document.createElement('div');
         div.className = 'log-entry';
-        div.innerText = `> ${msg}`;
-        document.getElementById('logs-container').prepend(div);
+        div.innerText = `> ${normalized}`;
+        container.prepend(div);
+
+        while (container.children.length > 600) {
+            container.removeChild(container.lastChild);
+        }
     });
 
     function showZackTutorial() {
@@ -1037,6 +1081,98 @@
         }
     }
 
+    function clearLogs() {
+        const el = document.getElementById('logs-container');
+        if (el) el.innerHTML = '';
+    }
+
+    function setLogFilter(value) {
+        LOG_FILTER = String(value || '').trim().toLowerCase();
+    }
+
+    function toggleLogPause() {
+        LOG_PAUSED = !LOG_PAUSED;
+        const btn = document.getElementById('log-pause-btn');
+        if (btn) btn.innerText = LOG_PAUSED ? 'Retomar' : 'Pausar';
+    }
+
+    function downloadLogs() {
+        const container = document.getElementById('logs-container');
+        const lines = Array.from(container?.querySelectorAll('.log-entry') || []).map(el => el.innerText);
+        const payload = lines.join('\n');
+        const blob = new Blob([payload], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `oraculo-logs-${Date.now()}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    async function reconnectSocket() {
+        try {
+            socket.disconnect();
+            socket.auth = { token: ADMIN_TOKEN };
+            socket.connect();
+            Swal.fire({icon:'success', title:'Reconectando socket', timer:1200, showConfirmButton:false, background:'#000000', color:'#FAB464'});
+        } catch (e) {
+            Swal.fire({icon:'error', title:'Falha ao reconectar', text:String(e?.message || e), background:'#000000', color:'#FAB464', confirmButtonColor:'#F0B450'});
+        }
+    }
+
+    async function refreshDashboardData() {
+        await Promise.allSettled([
+            loadAIConfig(),
+            loadCampaigns()
+        ]);
+    }
+
+    function toggleCampaignAutoRefresh() {
+        campaignAutoRefresh = !campaignAutoRefresh;
+        const btn = document.getElementById('campaign-auto-btn');
+        if (btn) btn.classList.toggle('is-active', campaignAutoRefresh);
+
+        if (campaignRefreshTimer) {
+            clearInterval(campaignRefreshTimer);
+            campaignRefreshTimer = null;
+        }
+
+        if (campaignAutoRefresh) {
+            campaignRefreshTimer = setInterval(() => {
+                loadCampaigns().catch(() => {});
+            }, 30000);
+        }
+    }
+
+    async function copyTokenResult() {
+        const box = document.getElementById('token-result');
+        const token = String(box?.innerText || '').trim();
+        if (!token) {
+            Swal.fire({icon:'info', title:'Nenhum token gerado', background:'#000000', color:'#FAB464', confirmButtonColor:'#F0B450'});
+            return;
+        }
+        try {
+            await navigator.clipboard.writeText(token);
+            Swal.fire({icon:'success', title:'Token copiado', timer:1200, showConfirmButton:false, background:'#000000', color:'#FAB464'});
+        } catch {
+            Swal.fire({icon:'error', title:'Não foi possível copiar', background:'#000000', color:'#FAB464', confirmButtonColor:'#F0B450'});
+        }
+    }
+
+    function createComm() {
+        const name = String(document.getElementById('comm-name')?.value || '').trim();
+        const desc = String(document.getElementById('comm-desc')?.value || '').trim();
+        if (!name || !desc) {
+            Swal.fire({icon:'warning', title:'Preencha nome e descrição', background:'#000000', color:'#FAB464', confirmButtonColor:'#F0B450'});
+            return;
+        }
+
+        const cmd = `!comunidade criar ${name} | ${desc}`;
+        navigator.clipboard.writeText(cmd)
+            .then(() => Swal.fire({icon:'success', title:'Comando copiado', text: cmd, background:'#000000', color:'#FAB464', confirmButtonColor:'#F0B450'}))
+            .catch(() => Swal.fire({icon:'info', title:'Comando gerado', text: cmd, background:'#000000', color:'#FAB464', confirmButtonColor:'#F0B450'}));
+    }
+
     async function loadAIConfig() {
         const res = await apiFetch('/api/ai-config');
         const data = await res.json();
@@ -1083,10 +1219,19 @@
     async function loadCampaigns() {
         const res = await apiFetch('/api/campaigns');
         const data = await res.json();
-        document.getElementById('campaign-list-container').innerHTML = data.map(c => `
+        const list = Array.isArray(data) ? data : [];
+        const container = document.getElementById('campaign-list-container');
+        if (!container) return;
+
+        if (!list.length) {
+            container.innerHTML = '<div class="campaign-item"><h3>Nenhuma campanha ativa</h3><span style="font-size:0.8rem; color: var(--text-muted);">Crie uma campanha no painel ao lado.</span></div>';
+            return;
+        }
+
+        container.innerHTML = list.map(c => `
             <div class="campaign-item">
-                <h3 style="color:white">${c.name}</h3>
-                <span style="color:#aaa; font-size:0.8rem">Enviados: ${c.stats.sentTotal}</span>
+                <h3>${c.name}</h3>
+                <span style="font-size:0.8rem; color: var(--text-muted);">Enviados: ${c?.stats?.sentTotal || 0}</span>
             </div>
         `).join('');
     }
