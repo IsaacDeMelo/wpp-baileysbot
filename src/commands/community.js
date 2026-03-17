@@ -187,10 +187,13 @@ async function handleCommunityCommands(ctx) {
     if (command === '!comunidades') {
         if (!isMaster) return true;
         const comms = await Community.find();
-        let txt = `🧩| *COMUNIDADES GLOBAIS*\n> ${moment().format('DD/MM/YY • HH:mm')}\n\n`;
+        let txt = `🧩| *COMUNIDADES GLOBAIS*\n> 📅 ${moment().format('DD/MM/YYYY [às] HH:mm')}\n\n`;
         for (const c of comms) {
             const stats = getCommunityStats(c);
-            txt += `* Comunidade: ${c.name}\n* Criada por: @${cleanID(c.creatorJid)}\n* Atividade Semanal: ${stats.currentWeek} msgs\n\n`;
+            txt += `* Comunidade: ${c.name}\n`;
+            txt += `* Criada por: @${cleanID(c.creatorJid)}\n`;
+            txt += `* Grupos: ${c.groups.length}\n`;
+            txt += `* Atividade Semanal: ${stats.currentWeek} msgs\n\n`;
         }
         await sock.sendMessage(jid, { text: txt, mentions: comms.map(c => c.creatorJid) });
         return true;
@@ -213,11 +216,26 @@ async function handleCommunityCommands(ctx) {
     const groupsData = await GroupConfig.find({ jid: { $in: comm.groups } }).lean();
     const groupsByJid = new Map((groupsData || []).map(g => [g.jid, g]));
 
+    const totalGroups = comm.groups.length;
+    const variation = stats.lastWeek > 0
+        ? ((stats.currentWeek - stats.lastWeek) / stats.lastWeek * 100).toFixed(1)
+        : (stats.currentWeek > 0 ? '+100' : '0');
+    const variationStr = stats.lastWeek > 0
+        ? `${stats.currentWeek >= stats.lastWeek ? '+' : ''}${variation}%`
+        : (stats.currentWeek > 0 ? '+100%' : '0%');
+
     let report = `🧩| *COMUNIDADE ${comm.name.toUpperCase()}*\n`;
-    report += `> Criada em: ${moment(comm.createdAt).format('DD/MM/YY HH:mm')}\n`;
-    report += `> Por: ${comm.creatorJid === cleanSender ? 'Você' : '@' + cleanID(comm.creatorJid)}\n\n`;
-    report += `☕| *DADOS GERAIS*\n* Grupos: ${comm.groups.length}\n* Msgs Semanais: ${stats.currentWeek}\n\n`;
-    report += `🎲| *ATIVIDADE*\n* Semanal: ${stats.currentWeek}\n* Anterior: ${stats.lastWeek}\n\n`;
+    report += `> 📅 Criada em: ${moment(comm.createdAt).format('DD/MM/YYYY [às] HH:mm')}\n`;
+    report += `> 👤 Por: ${comm.creatorJid === cleanSender ? 'Você' : '@' + cleanID(comm.creatorJid)}\n`;
+    if (comm.description) report += `> 📝 ${comm.description}\n`;
+    report += `\n`;
+
+    report += `📊| *INFORMAÇÕES*\n`;
+    report += `* Total de Grupos: ${totalGroups}\n`;
+    report += `* Msgs Esta Semana: ${stats.currentWeek}\n`;
+    report += `* Msgs Semana Anterior: ${stats.lastWeek}\n`;
+    report += `* Variação: ${variationStr}\n\n`;
+
     report += `☕| *GRUPOS INTEGRANTES*\n`;
     if (!Array.isArray(comm.groups) || !comm.groups.length) {
         report += `• (sem grupos vinculados)\n`;

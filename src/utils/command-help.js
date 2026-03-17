@@ -72,7 +72,7 @@ function buildManualText(rank) {
     parts.push('\n🧰 *UTILITARIOS*');
     parts.push('• *!ping:* Teste de latência.');
     parts.push('• *!sticker / !s:* Cria figurinha a partir de imagem/vídeo.');
-    parts.push('• *!play / !mp3:* Busca e baixa áudio do YouTube.');
+    parts.push('• *!play / !mp3:* Busca e baixa áudio do SoundCloud (padrão). Use prefixo *yt:* para buscar no YouTube.');
 
     if (lvl >= RANK_LEVELS.Master) {
         parts.push('\n⚖️ *MODERACAO & SEGURANCA*');
